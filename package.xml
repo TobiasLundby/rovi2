@@ -3,8 +3,11 @@
   <name>rovi2</name>
   <version>0.0.1</version>
   <description>ROVI2 project</description>
-  <maintainer email="nilet13@student.sdu.dk">mband</maintainer>
-  <license>BSD</license>
+  <maintainer email="nilet13@student.sdu.dk">Nikolaj Westphal Leth</maintainer>
+  <maintainer email="megeb13@student.sdu.dk">Mathias Hoejgaard Egeberg</maintainer>
+  <maintainer email="tolun13@student.sdu.dk">Tobias Lundby</maintainer>
+  <maintainer email="mafra04@student.sdu.dk">Martin Toft Franzen</maintainer>
+  <license>BSD-3</license>
 
   <buildtool_depend>catkin</buildtool_depend>
 

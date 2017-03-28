@@ -1,0 +1,11 @@
+<launch>
+    <arg name="camera_sub_left" default="/camera/left/image_color" />
+    <node pkg="rovi2" name="image_converter_left" type="image_converter" >
+        <param name="camera_sub" type="str" value="$(arg camera_sub_left)" />
+    </node>
+
+    <arg name="camera_sub_right" default="/camera/right/image_color" />
+    <node pkg="rovi2" name="image_converter_right" type="image_converter" >
+        <param name="camera_sub" type="str" value="$(arg camera_sub_right)" />
+    </node>
+</launch>

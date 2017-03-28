@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   rosconsole
   roscpp
   std_msgs
+  cv_bridge
+  image_transport
 )
 
 
@@ -40,7 +42,7 @@ if (SHOULD_BUILD)
   ## Declare ROS messages, services and actions ##
   ################################################
   add_service_files(
-    FILES  
+    FILES
     MovePtp.srv
     )
 
@@ -58,11 +60,11 @@ if (SHOULD_BUILD)
   ###################################
   ## catkin specific configuration ##
   ###################################
-  catkin_package( 
+  catkin_package(
     INCLUDE_DIRS include
     CATKIN_DEPENDS message_runtime roscpp std_msgs
     DEPENDS ROBWORK ROBWORKHARDWARE
-    #CFG_EXTRAS "use-c++11.cmake"  
+    #CFG_EXTRAS "use-c++11.cmake"
     )
 
   ########################################################################
@@ -70,7 +72,7 @@ if (SHOULD_BUILD)
   ########################################################################
   include_directories(${node_name}
     include
-    ${ROBWORK_INCLUDE_DIR} 
+    ${ROBWORK_INCLUDE_DIR}
     ${ROBWORKHARDWARE_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     )
@@ -81,14 +83,25 @@ if (SHOULD_BUILD)
 
     )
 
-  target_link_libraries(${node_name} 
+  target_link_libraries(${node_name}
     ${ROBWORK_LIBRARIES}
     ${ROBWORKHARDWARE_LIBRARIES}
     ${catkin_LIBRARIES}
     )
 
+
   #add_dependencies(
   #  )
+
+  #find_package( OpenCV REQUIRED ) # Required below
+  add_executable(image_converter src/image_converter.cpp)
+  #target_link_libraries(image_converter ${catkin_LIBRARIES} ${OpenCV_LIBS} )
+  target_link_libraries(image_converter ${catkin_LIBRARIES} )
+  add_dependencies(image_converter sensor_msgs cv_bridge roscpp std_msgs image_transport opencv)
+
+  #add_executable(offboard_node src/offboard_node.cpp)
+  #target_link_libraries(offboard_node ${catkin_LIBRARIES})
+  #add_dependencies(offboard_node geometry_msgs mavros_msgs mavros roscpp rospy std_msgs)
 
 catkin_package()
 
