@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rovi2</name>
+  <version>0.0.1</version>
+  <description>ROVI2 project</description>
+  <maintainer email="nilet13@student.sdu.dk">mband</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <build_depend>roslint</build_depend>
+
+  <depend>std_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>rosconsole</depend>
+
+  <exec_depend>message_runtime</exec_depend>
+
+  <doc_depend>doxygen</doc_depend>
+  <doc_depend>rosdoc_lite</doc_depend>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+
+</package>

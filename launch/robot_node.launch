@@ -1,0 +1,14 @@
+<launch>
+  <!-- use something like set_workcell:=0 (to disable setting a workcell using this launch script), or specify a specific workcell using 	workcell_path:=/path/to/the/workcell on the roslaunch commandline -->
+  <arg name="set_workcell" default="1" />
+  <group if="$(arg set_workcell)">
+    <arg name="workcell_path" default="$(env RW_ROOT)/example/ModelData/XMLScenes/RobotOnTable/Scene.xml" />
+    <param name="/sample/workcell" value="$(arg workcell_path)" />
+  </group>
+
+  <group>
+    <!-- The 'name' parameter has to match the 'ns' parameter used in the include tag above -->
+    <node pkg="rovi2" type="robot_node" name="robot_node">
+    </node>
+  </group>
+</launch>
