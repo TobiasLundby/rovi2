@@ -1,11 +1,14 @@
 // http://wiki.ros.org/cv_bridge/Tutorials/UsingCvBridgeToConvertBetweenROSImagesAndOpenCVImages
-#include <ros/ros.h>
+#include "ros/ros.h"
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/opencv.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include <string>
+#include "ColorDetector.hpp"
+#include "rovi2/position2D.h"
 
 static const std::string OPENCV_WINDOW = "Image window";
 
@@ -15,6 +18,10 @@ class ImageConverter
   image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
   image_transport::Publisher image_pub_;
+
+  //Ball detection
+  ros::Publisher position_pub;
+  ColorDetector * detector;
 
 public:
   ImageConverter()
@@ -41,6 +48,11 @@ public:
       &ImageConverter::imageCb, this);
     image_pub_ = it_.advertise(output_topic_cam, 1);
 
+    // Ball detection
+    std::string output_topic_position = node_name + "/pos";
+    position_pub = nh_.advertise<rovi2::position2D>(output_topic_position,1000);
+    detector = new ColorDetector();
+
     cv::namedWindow(OPENCV_WINDOW);
   }
 
@@ -63,8 +75,8 @@ public:
     }
 
     // Draw an example circle on the video stream
-    if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
-      cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
+    //if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
+      //cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
 
     // Update GUI Window
     cv::imshow(OPENCV_WINDOW, cv_ptr->image);
@@ -72,6 +84,18 @@ public:
 
     // Output modified video stream
     image_pub_.publish(cv_ptr->toImageMsg());
+
+    // Find the ball
+    std::vector<Point2f> position;
+    position = detector->FindMarker(cv_ptr->image);
+    ROS_INFO("Found [%ld] ball", (long int)position.size());
+    if(position.size() > 0)
+    {
+      rovi2::position2D msg;
+      msg.x = (float)position.at(0).x;
+      msg.y = (float)position.at(0).y;
+      position_pub.publish(msg); // Publish it
+    }
   }
 };
 

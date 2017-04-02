@@ -50,6 +50,8 @@ if (SHOULD_BUILD)
 	  FILES
 	  Q.msg
 	  State.msg
+    position2D.msg
+    position3D.msg
 	)
 
   generate_messages(
@@ -90,14 +92,22 @@ if (SHOULD_BUILD)
     )
 
 
-  #add_dependencies(
-  #  )
+  add_dependencies(${node_name} rovi2_generate_messages_cpp
+    )
 
   #find_package( OpenCV REQUIRED ) # Required below
-  add_executable(image_converter src/image_converter.cpp)
+  add_executable(image_converter src/image_converter.cpp src/ColorDetector.cpp)
   #target_link_libraries(image_converter ${catkin_LIBRARIES} ${OpenCV_LIBS} )
   target_link_libraries(image_converter ${catkin_LIBRARIES} )
-  add_dependencies(image_converter sensor_msgs cv_bridge roscpp std_msgs image_transport opencv)
+  add_dependencies(image_converter sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
+
+  #add_executable(camera3D src/camera3D.cpp src/Stereopsis.cpp)
+  #target_link_libraries(camera3D ${catkin_LIBRARIES} ${OpenCV_LIBS))
+  #add_dependencies(camera3D std_msgs rovi2_generate_messages_cpp)
+
+  #add_executable(camera2D src/camera2D.cpp)
+  #target_link_libraries(camera2D ${catkin_LIBRARIES})
+  #add_dependencies(camera2D std_msgs)
 
   #add_executable(offboard_node src/offboard_node.cpp)
   #target_link_libraries(offboard_node ${catkin_LIBRARIES})
