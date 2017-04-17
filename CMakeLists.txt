@@ -5,6 +5,7 @@ set(node_name "robot_node")
 
 #include("cmake/use-c++11.cmake")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 ########################################################################
 #### Catkin Packages
 ########################################################################
@@ -112,6 +113,10 @@ if (SHOULD_BUILD)
   #add_executable(offboard_node src/offboard_node.cpp)
   #target_link_libraries(offboard_node ${catkin_LIBRARIES})
   #add_dependencies(offboard_node geometry_msgs mavros_msgs mavros roscpp rospy std_msgs)
+
+  add_executable(Roadmap src/Roadmap.cpp)
+  target_link_libraries(Roadmap ${ROBWORK_LIBRARIES} ${catkin_LIBRARIES})
+  add_dependencies(Roadmap std_msgs)
 
 catkin_package()
 
