@@ -40,6 +40,7 @@ public:
 	void find_path(rw::math::Q init, rw::math::Q goal);
 
 	// If the distance is small enough, do not start a graph search, insted make graping using RRT (seperate ROS topic!)
+	// Always check with this one before calling find_path
 	void distance_to_goal(rw::math::Q init, rw::math::Q goal);
 	 
  
