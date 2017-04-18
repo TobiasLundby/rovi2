@@ -27,28 +27,19 @@ public:
   ColorDetector();
   std::vector<Point2f> FindMarker(Mat &image);
 private:
-  int dilate_color_iterations = 1;
+  int erode_color_iterations  = 1;
+  int dilate_color_iterations = 3;
 
   SimpleBlobDetector::Params params;
   Ptr<SimpleBlobDetector> detector;
 
-  // *** MARKER BLUE ***
-  int hsv_h_base_MB        = HUE_BLUE_OWN;
-  int hsv_h_sensitivity_MB = 25; // 5 for big green led and 24 for most other
-  int hsv_h_low_MB         = hsv_h_base_MB - hsv_h_sensitivity_MB; //hsv_h_base - hsv_h_sensitivity;
-  int hsv_h_upper_MB       = hsv_h_base_MB + hsv_h_sensitivity_MB;//hsv_h_base + hsv_h_sensitivity;
-  int hsv_s_low_MB         = 30; //100;
-  int hsv_s_upper_MB       = 255;
-  int hsv_v_low_MB         = 30; //100;
-  int hsv_v_upper_MB       = 255;
-
-  // *** MARKER RED *** (the red is shifted into the yellow area)
-  int hsv_h_base_MR        = HUE_YELLOW_OWN;
-  int hsv_h_sensitivity_MR = 15; // 5 for big green led and 24 for most other
-  int hsv_h_low_MR         = 0;//hsv_h_base_MR - hsv_h_sensitivity_MR; //hsv_h_base - hsv_h_sensitivity;
-  int hsv_h_upper_MR       = 30;//hsv_h_base_MR + hsv_h_sensitivity_MR;//hsv_h_base + hsv_h_sensitivity;
-  int hsv_s_low_MR         = 160; //100;
+  // *** MARKER RED / RED BALL *** (the red is shifted into the yellow area)
+  int hsv_h_base_MR        = 55; // 55 is almost green
+  int hsv_h_sensitivity_MR = 9; // 5 for big green led and 24 for most other
+  int hsv_h_low_MR         = hsv_h_base_MR - hsv_h_sensitivity_MR; //hsv_h_base - hsv_h_sensitivity;
+  int hsv_h_upper_MR       = hsv_h_base_MR + hsv_h_sensitivity_MR;//hsv_h_base + hsv_h_sensitivity;
+  int hsv_s_low_MR         = 135; //100;
   int hsv_s_upper_MR       = 255;
-  int hsv_v_low_MR         = 160; //100;
+  int hsv_v_low_MR         = 98; //100;
   int hsv_v_upper_MR       = 255;
 };
