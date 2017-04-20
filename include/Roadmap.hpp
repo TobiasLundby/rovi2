@@ -7,6 +7,16 @@
 #include <rw/models/Device.hpp>
 #include <rw/rw.hpp>
 #include <rw/math/Q.hpp>
+//#include <rw/math/QMetric.hpp>
+#include <rwlibs/proximitystrategies/ProximityStrategyPQP.hpp>
+#include <rw/pathplanning/PlannerConstraint.hpp>
+#include <rw/pathplanning/QConstraint.hpp>
+#include <rw/pathplanning/QEdgeConstraint.hpp>
+#include <rw/proximity/CollisionDetector.hpp>
+#include <rw/proximity/CollisionStrategy.hpp>
+#include <rw/common.hpp>
+#include <rw/pathplanning/QSampler.hpp>
+#include <rwlibs/algorithms/kdtree/KDTreeQ.hpp>
 
 class Node
 {
@@ -25,11 +35,11 @@ class Roadmap
 {
 public:
 
-	Roadmap(); 
+	Roadmap(int size, double resolution, double connection_radius); 
 
 	virtual ~Roadmap();
 
-        void create_roadmap(int size, double resolution, double connection_radius);
+        void create_roadmap();
         void save_roadmap(std::string path);
 	void load_roadmap(std::string path);
 
@@ -53,6 +63,8 @@ protected:
 
 	// Find connection node for init and goal from a Q position
 	Node* find_connection_node(rw::math::Q);
+	bool inCollision(Node *n);
+	bool inCollision(Node *a, Node *b);
 
 
 
@@ -63,8 +75,26 @@ public:
   	rw::models::WorkCell::Ptr _workcell;
 	rw::kinematics::State _state;
   	rw::models::Device::Ptr _device;
-        std::vector<Node*> *_graph;
+	rw::proximity::CollisionDetector::Ptr _detector;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint;
+	rw::proximity::CollisionStrategy::Ptr _strategy;
+	rw::pathplanning::QSampler::Ptr _sampler;
+	rw::math::Q _metricWeights;
+	rw::math::QMetric::Ptr _metric;
+
+	// KdTree for nearest neighbor search.
+        rwlibs::algorithms::KDTreeQ<Node*>::Ptr  _kdtree;
+        std::list<const rwlibs::algorithms::KDTreeQ<Node*>::KDNode*> _kdnodesSearchResult;
+
+	// The graph is just a container for the node pointers.
+	std::vector<Node*> *_graph;
+
+	double _resolution;
+	double _size;
+	double _connection_radius;
+	
 
 };
 
-#endif ROADMAP_ROS
+#endif
