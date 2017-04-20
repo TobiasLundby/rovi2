@@ -10,6 +10,8 @@
 #include "ColorDetector.hpp"
 #include "rovi2/position2D.h"
 
+#define SHOW_INPUT_STREAM false
+
 static const std::string OPENCV_WINDOW = "Image window";
 
 class ImageConverter
@@ -53,12 +55,16 @@ public:
     position_pub = nh_.advertise<rovi2::position2D>(output_topic_position,1000);
     detector = new ColorDetector();
 
-    cv::namedWindow(OPENCV_WINDOW);
+    if (SHOW_INPUT_STREAM) {
+        cv::namedWindow(OPENCV_WINDOW);
+    }
   }
 
   ~ImageConverter()
   {
-    cv::destroyWindow(OPENCV_WINDOW);
+    if (SHOW_INPUT_STREAM) {
+        cv::destroyWindow(OPENCV_WINDOW);
+    }
   }
 
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
@@ -79,7 +85,9 @@ public:
       //cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
 
     // Update GUI Window
-    cv::imshow(OPENCV_WINDOW, cv_ptr->image);
+    if (SHOW_INPUT_STREAM) {
+        cv::imshow(OPENCV_WINDOW, cv_ptr->image);
+    }
     cv::waitKey(3);
 
     // Output modified video stream
