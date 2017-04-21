@@ -8,11 +8,12 @@
 #include <rw/math/MetricFactory.hpp>
 
 
-Roadmap::Roadmap(int size, double resolution, double connection_radius):
+Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
 
 	_resolution(resolution),
 	_size(size),
-	_connection_radius(connection_radius)
+	_connection_radius(connection_radius),
+	_max_density(max_density)
 
 {
 	Roadmap::initWorkCell();
@@ -26,6 +27,172 @@ Roadmap::Roadmap(int size, double resolution, double connection_radius):
 Roadmap::~Roadmap()
 {
 };
+
+bool Roadmap::inCollision(Node *n)
+{
+	return _constraint->inCollision(n->q_val);
+
+
+};
+
+
+bool Roadmap::inCollision(Node *a, Node *b)
+{
+
+	return _edgeConstraint->inCollision(a->q_val, b->q_val);
+
+};
+
+void Roadmap::addNode(rw::math::Q n, int nodeid)
+{
+	Node* tempNode = new Node(n, nodeid);
+	_graph->push_back(tempNode);
+	_kdtree->addNode(n, tempNode);
+	 
+
+};
+
+bool Roadmap::addNode()
+{
+	rw::math::Q sample = _sampler->sample();
+	if(!distanceTooClose(sample))
+	{
+		addNode(sample, _actualSize);
+		_actualSize++;
+		return true;
+	}
+	return false;
+
+};
+
+void Roadmap::addEdges(int nodeidA, int nodeidB)
+{
+	_graph->at(nodeidA)->edges.push_back(_graph->at(nodeidB));
+	_graph->at(nodeidB)->edges.push_back(_graph->at(nodeidA));
+	_connectedEdgePairs++;
+
+};
+
+bool Roadmap::distanceTooClose(rw::math::Q a)
+{
+	_kdnodesSearchResult.clear();
+
+
+        _kdtree->nnSearchElipse(a, _radi2 ,_kdnodesSearchResult);
+	return _kdnodesSearchResult.size();
+
+};
+
+std::vector<Node*> Roadmap::nodesInRange(Node *a)
+{
+	_kdnodesSearchResult.clear();
+	std::vector<Node*> res(0);
+
+
+	
+        _kdtree->nnSearchElipse(a->q_val, _radi ,_kdnodesSearchResult);
+	for (std::list<const rwlibs::algorithms::KDTreeQ<Node*>::KDNode*>::const_iterator iterator = _kdnodesSearchResult.begin(), end = _kdnodesSearchResult.end(); iterator != end; ++iterator)
+	{
+		double dist = _metric->distance(a->q_val, (*iterator)->value->q_val);
+		
+		if(dist <= _connection_radius)
+		{
+			std::stringstream buffer;
+		buffer << "dist " << dist << std::endl;
+		//ROS_ERROR("%s", buffer.str().c_str());
+			res.push_back((*iterator)->value);
+		}
+
+		
+
+
+
+	}
+	return res;		
+
+}; 
+
+void Roadmap::addEdges(std::vector<Node*> n, Node *a)
+{
+	for(int i = 0; i< n.size(); i++)
+	{
+		bool already_edge = true;
+		if(n[i]->edges.size() == 0)
+			already_edge = false;
+		else
+			for(int j = 0; j< n[i]->edges.size(); j++)
+			{
+				already_edge = false;
+				if(n[i]->edges[j]->nodenum == a->nodenum)
+				{
+					already_edge = true;
+					break;
+				}
+			}
+		if(!already_edge && n[i]->nodenum != a->nodenum)
+		{
+			n[i]->edges.push_back(a);
+			a->edges.push_back(n[i]);
+			_connectedEdgePairs++;
+			//ROS_INFO("Here");
+
+		}	
+
+	}
+
+
+
+};
+
+void Roadmap::connectGraph()
+{
+	for(int i = 0; i< _graph->size(); i++)
+	{
+		std::vector<Node*> n = nodesInRange(_graph->at(i));
+		addEdges(n, _graph->at(i));
+	}
+
+
+};
+
+bool Roadmap::create_roadmap()
+{
+	while(_actualSize < _size)
+	{
+		for(int i = 0; i< 100; i++)
+			if(addNode())
+				break;
+			else if(i == 99)
+				return false;
+		
+	}
+	
+	connectGraph();
+	int non = nonConnectedNodes();
+
+	std::stringstream buffer;
+	buffer << "ConnectedNodes: " << _actualSize - non << " , nonConnectedNodes: " << non << std::endl;
+	ROS_INFO("%s", buffer.str().c_str());
+
+
+	return true;
+
+};
+
+int Roadmap::nonConnectedNodes()
+{
+	int count = 0;
+	for(int i = 0; i< _graph->size(); i++)
+	{
+		if(_graph->at(i)->edges.size() == 0)
+			count++;
+	}
+
+	return count;
+
+
+};
+
 
 void Roadmap::initWorkCell()
 {
@@ -75,6 +242,31 @@ void Roadmap::initWorkCell()
 	_graph = new std::vector<Node*>(0);
 	_graph->reserve(_size);
 
+
+	_radi = _metricWeights;
+
+        for(size_t i=0;i<_radi.size();i++){
+            _radi[i] = _connection_radius/std::max(_metricWeights(i),0.1);
+        }
+
+        double nlen = _radi.norm2();
+        for(size_t i=0;i<_radi.size();i++){
+            _radi[i] = _radi[i]*(_connection_radius*std::sqrt(_device->getBounds().first.size()))/nlen;
+        }
+
+
+	_radi2 = _metricWeights;
+
+        for(size_t i=0;i<_radi2.size();i++){
+            _radi2[i] = _max_density/std::max(_metricWeights(i),0.1);
+        }
+
+        nlen = _radi2.norm2();
+        for(size_t i=0;i<_radi2.size();i++){
+            _radi2[i] = _radi2[i]*(_max_density*std::sqrt(_device->getBounds().first.size()))/nlen;
+        }
+
+
 };
 
 
@@ -82,7 +274,16 @@ int main(int argc, char **argv)
 {
   ros::init(argc,argv,"roadmap");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(1000, 0.01, 0.05);
+  Roadmap Roadmap_ros(50000, 0.005, 1, 0.5);
+  if(Roadmap_ros.create_roadmap())
+  {
+	std::stringstream buffer;
+	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" << std::endl;
+	ROS_INFO("%s", buffer.str().c_str());
+  }
+  else
+	ROS_INFO("Could not create Roadmap!");
+
   while(ros::ok())
   {
     ros::spinOnce();

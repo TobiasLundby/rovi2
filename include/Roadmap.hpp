@@ -20,7 +20,8 @@
 
 class Node
 {
- 	Node(rw::math::Q p){ q_val = p; edges = std::vector<Node*>(0);}
+public:
+ 	Node(rw::math::Q p, int nodeid){ q_val = p; edges = std::vector<Node*>(0); nodenum = nodeid;}
 	~Node();
 	 
 	void add_edge(Node* e){ edges.push_back(e);}
@@ -28,6 +29,7 @@ class Node
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
         bool connected = false;
+	int nodenum;
 };
 
 
@@ -35,11 +37,11 @@ class Roadmap
 {
 public:
 
-	Roadmap(int size, double resolution, double connection_radius); 
+	Roadmap(int size, double resolution, double connection_radius, double max_density); 
 
 	virtual ~Roadmap();
 
-        void create_roadmap();
+        bool create_roadmap();
         void save_roadmap(std::string path);
 	void load_roadmap(std::string path);
 
@@ -66,6 +68,22 @@ protected:
 	bool inCollision(Node *n);
 	bool inCollision(Node *a, Node *b);
 
+	bool distanceTooClose(rw::math::Q a);
+
+	// These are not checked for collision!
+	void addNode(rw::math::Q, int);
+	void addEdges(int nodeidA, int nodeidB);
+
+	// Add a new samples node
+	bool addNode();
+
+	std::vector<Node*> nodesInRange(Node *a); 
+	void addEdges(std::vector<Node*> n, Node *a);
+	void connectGraph();
+
+	int nonConnectedNodes();
+
+
 
 
 
@@ -82,6 +100,8 @@ public:
 	rw::pathplanning::QSampler::Ptr _sampler;
 	rw::math::Q _metricWeights;
 	rw::math::QMetric::Ptr _metric;
+	rw::math::Q _radi;
+	rw::math::Q _radi2;
 
 	// KdTree for nearest neighbor search.
         rwlibs::algorithms::KDTreeQ<Node*>::Ptr  _kdtree;
@@ -92,7 +112,10 @@ public:
 
 	double _resolution;
 	double _size;
+	double _actualSize = 0;
+	double _connectedEdgePairs = 0;
 	double _connection_radius;
+	double _max_density;
 	
 
 };
