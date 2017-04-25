@@ -18,7 +18,7 @@
 #include <rw/pathplanning/QSampler.hpp>
 #include <rwlibs/algorithms/kdtree/KDTreeQ.hpp>
 
-bool Sorting(int i, int j) { return i > j; }
+
 
 
 class Node
@@ -31,23 +31,26 @@ public:
 
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
-        bool connected = false;
         bool connected_component = false;
+        bool usable = false;
 	int nodenum;
 };
 
+
+bool Sorting(std::vector<Node*> i, std::vector<Node*> j) { return i.size() > j.size(); }
 
 class Roadmap
 {
 public:
 
 	Roadmap(int size, double resolution, double connection_radius, double max_density); 
+	Roadmap(std::string path);
 
 	virtual ~Roadmap();
 
         bool create_roadmap();
         void save_roadmap(std::string path);
-	void load_roadmap(std::string path);
+
 
 	
 	// ROS topics	
@@ -68,6 +71,7 @@ public:
 
 protected:
 	void initWorkCell();
+	void initRobworkStuff();
 
 	// Find connection node for init and goal from a Q position
 	Node* find_connection_node(rw::math::Q);
@@ -77,7 +81,7 @@ protected:
 	bool distanceTooClose(rw::math::Q a);
 
 	// These are not checked for collision!
-	void addNode(rw::math::Q, int);
+	void addNode(rw::math::Q n, int nodeid, bool c, bool u);
 	void addEdges(int nodeidA, int nodeidB);
 
 	// Add a new samples node
@@ -89,6 +93,8 @@ protected:
 
 	int nonConnectedNodes();
 
+	void load_roadmap(std::string path);
+
 
 
 
@@ -98,7 +104,7 @@ protected:
 
 
 public:
-  	rw::models::WorkCell::Ptr _workcell;
+  	rw::models::WorkCell::Ptr _workcell = nullptr;
 	rw::kinematics::State _state;
   	rw::models::Device::Ptr _device;
 	rw::proximity::CollisionDetector::Ptr _detector;
@@ -124,6 +130,8 @@ public:
 	double _connectedEdgePairs = 0;
 	double _connection_radius;
 	double _max_density;
+	double _usable_nodes;
+	double _largestConnected = 0;
 	
 
 };
