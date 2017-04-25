@@ -1,9 +1,9 @@
 #include "ColorDetector.hpp"
 #include <iostream>
-#define DEBUG true
+#define DEBUG false
 #define DEBUG_SHIFTED_IMAGE false
 #define DEBUG_RESULT true
-#define ENABLE_FILTER_TRACKBARS true
+#define ENABLE_FILTER_TRACKBARS false
 
 ColorDetector::ColorDetector(){
   // All the parameters below are used for the blob detector - only some of them are used because motion blur introduces different shapes etc.
@@ -95,7 +95,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
   if(DEBUG_RESULT)
   {
     drawKeypoints(image,keypoints_MR,image,Scalar(0,255,0),DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    imshow("image",image);
+    imshow(window_name,image);
   }
 
   std::vector< Point2f > output_points;
@@ -103,4 +103,9 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     output_points.push_back(keypoints_MR.at(i).pt);
 
   return output_points;
+}
+
+void ColorDetector::set_result_window_name(std::string name)
+{
+    window_name = name;
 }
