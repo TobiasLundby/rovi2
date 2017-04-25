@@ -1,6 +1,6 @@
 <launch>
-    <arg name="camera_sub_left" default="/camera/left/image_color" />
-    <arg name="camera_sub_right" default="/camera/right/image_color" />
+    <arg name="camera_sub_left" default="/camera/left/image_raw" />
+    <arg name="camera_sub_right" default="/camera/right/image_raw" />
 
     <node pkg="rovi2" name="ball_locator_3d" type="ball_locator_3d" >
         <param name="camera_sub_left" type="str" value="$(arg camera_sub_left)" />
