@@ -1,4 +1,6 @@
 #include "RobotNode.h"
+#include "ros/package.h"
+#include "ros/this_node.h"
 
 
 
@@ -49,12 +51,8 @@ void RobotNode_ros::initWorkCell()
     ros::NodeHandle node("~");
     std::string workcell_file;
     bool found_param;
-    found_param = node.getParam("/sample/workcell", workcell_file);
-    if (!found_param)
-    {
-      ROS_ERROR_STREAM("No such parameter on the parameter server: " << "/sample/workcell");
-    }
-	_workcell = rw::loaders::WorkCellLoader::Factory::load(workcell_file);
+	std::string path = ros::package::getPath("rovi2") + "/WorkStation_3/WC3_Scene.wc.xml";
+	_workcell = rw::loaders::WorkCellLoader::Factory::load(path);
 
 	_device = _workcell->findDevice("UR1");
 

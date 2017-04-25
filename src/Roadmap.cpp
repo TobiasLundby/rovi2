@@ -6,6 +6,9 @@
 #include <string>
 #include <rw/pathplanning/PlannerUtil.hpp>
 #include <rw/math/MetricFactory.hpp>
+#include <algorithm>
+#include <rw/math/Math.hpp>
+#include <time.h> 
 
 
 Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
@@ -196,6 +199,8 @@ int Roadmap::nonConnectedNodes()
 
 void Roadmap::initWorkCell()
 {
+
+	rw::math::Math::seed();
 	std::string path = ros::package::getPath("rovi2") + "/WorkStation_3/WC3_Scene.wc.xml";
 	_workcell = rw::loaders::WorkCellLoader::Factory::load(path);
 
@@ -269,12 +274,63 @@ void Roadmap::initWorkCell()
 
 };
 
+void Roadmap::connectedComponents()
+{
+	std::vector<Node*> check(0);
+	std::vector<int> connected_parts(0);
+	int connectedNum = 0;
+	for(int i = 0; i< _graph->size(); i++)
+	{
+		if(_graph->at(i)->connected_component == false)
+			check.push_back(_graph->at(i));
+
+		while(!check.empty())
+		{
+			Node* tempNode = check.back();
+			check.pop_back();
+			if(tempNode->connected_component == false)
+			{	
+				tempNode->connected_component = true;
+				connectedNum++;
+				for(int j = 0; j < tempNode->edges.size(); j++)
+					check.push_back(tempNode->edges.at(j));
+			}
+			 
+		}
+
+		if(connectedNum > 0)
+		{
+			connected_parts.push_back(connectedNum);
+			connectedNum = 0;
+		}
+
+	}
+
+	std::sort(connected_parts.begin(), connected_parts.end(), Sorting);
+
+
+	for(int i = 0; i< connected_parts.size(); i++)
+	{
+		std::stringstream buffer;
+		buffer << "ConnectedPart " << i+1 << " has " << connected_parts.at(i) << " nodes" << std::endl;
+		ROS_INFO("%s", buffer.str().c_str());
+
+		if(i == 9)
+			break;
+
+	}
+
+	ROS_INFO("Done finding connected parts");
+		
+
+};
+
 
 int main(int argc, char **argv)
 {
   ros::init(argc,argv,"roadmap");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(50000, 0.005, 1, 0.5);
+  Roadmap Roadmap_ros(100, 0.005, 1, 0.5);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -283,6 +339,8 @@ int main(int argc, char **argv)
   }
   else
 	ROS_INFO("Could not create Roadmap!");
+
+  Roadmap_ros.connectedComponents();
 
   while(ros::ok())
   {

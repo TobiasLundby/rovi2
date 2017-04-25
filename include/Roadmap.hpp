@@ -18,6 +18,9 @@
 #include <rw/pathplanning/QSampler.hpp>
 #include <rwlibs/algorithms/kdtree/KDTreeQ.hpp>
 
+bool Sorting(int i, int j) { return i > j; }
+
+
 class Node
 {
 public:
@@ -29,6 +32,7 @@ public:
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
         bool connected = false;
+        bool connected_component = false;
 	int nodenum;
 };
 
@@ -54,6 +58,8 @@ public:
 	// If the distance is small enough, do not start a graph search, insted make graping using RRT (seperate ROS topic!)
 	// Always check with this one before calling find_path
 	void distance_to_goal(rw::math::Q init, rw::math::Q goal);
+
+	void connectedComponents();
 	 
  
 
@@ -82,6 +88,8 @@ protected:
 	void connectGraph();
 
 	int nonConnectedNodes();
+
+
 
 
 
