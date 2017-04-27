@@ -35,6 +35,13 @@ if (NOT ROBWORKHARDWARE_FOUND)
   set(SHOULD_BUILD 0)
 endif()
 
+
+########################################################################
+#### RobWorkStudio
+########################################################################
+SET(RWSTUDIO_ROOT $ENV{RWS_ROOT})
+FIND_PACKAGE(RobWorkStudio REQUIRED PATHS "${RWSTUDIO_ROOT}")
+
 ########################################################################
 #### Build process
 ########################################################################
@@ -66,7 +73,7 @@ if (SHOULD_BUILD)
   catkin_package(
     INCLUDE_DIRS include
     CATKIN_DEPENDS message_runtime roscpp std_msgs
-    DEPENDS ROBWORK ROBWORKHARDWARE
+    DEPENDS ROBWORK ROBWORKHARDWARE ROBWORKSTUDIO
     #CFG_EXTRAS "use-c++11.cmake"
     )
 
@@ -77,6 +84,7 @@ if (SHOULD_BUILD)
     include
     ${ROBWORK_INCLUDE_DIR}
     ${ROBWORKHARDWARE_INCLUDE_DIRS}
+    ${ROBWORKSTUDIO_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     )
 
@@ -89,6 +97,7 @@ if (SHOULD_BUILD)
   target_link_libraries(${node_name}
     ${ROBWORK_LIBRARIES}
     ${ROBWORKHARDWARE_LIBRARIES}
+    ${ROBWORKSTUDIO_LIBRARY_DIRS}
     ${catkin_LIBRARIES}
     )
 
@@ -123,6 +132,15 @@ if (SHOULD_BUILD)
   add_executable(Roadmap src/Roadmap.cpp)
   target_link_libraries(Roadmap ${ROBWORK_LIBRARIES} ${catkin_LIBRARIES})
   add_dependencies(Roadmap std_msgs)
+
+
+  #Robworkstudio plugin
+  QT4_WRAP_UI(UIS_OUT_H src/StudioPlugin.ui)
+  QT4_WRAP_CPP(MocSrcFiles include/StudioPlugin.hpp)
+  QT4_ADD_RESOURCES(RccSrcFiles src/StudioPlugin_resources.qrc)
+  set(StudioPlugin_src src/StudioPlugin.cpp)
+  add_library(StudioPlugin MODULE ${StudioPlugin_src} ${UIS_OUT_H} ${MocSrcFiles} ${RccSrcFiles})
+  target_link_libraries(StudioPlugin ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
 
 catkin_package()
 
