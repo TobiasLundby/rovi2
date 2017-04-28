@@ -4,6 +4,9 @@
 #include <vector>
 #include <utility>
 #include <string>
+#include <rw/math/Vector3D.hpp>
+#include <rw/math/Rotation3D.hpp>
+#include <rw/math/Transform3D.hpp>
 
 StudioPlugin::StudioPlugin() : RobWorkStudioPlugin("StudioPluginUI", QIcon("icon.png"))
 {
@@ -69,8 +72,14 @@ void StudioPlugin::openROS()
         _rosTimer->start(20);
         _btnROS->setEnabled(false);
 	
-	_subscriberState = _nh->subscribe("/rovi2/robot_node/Robot_state", 1, &StudioPlugin::updateCallback, this);
-        _subscriberBall = _nh->subscribe("/ball_locator_3d/pos_triangulated" , 1, &StudioPlugin::ballCallback, this);
+	if(_crobot->isChecked())
+		_subscriberState = _nh->subscribe("/rovi2/robot_node/Robot_state", 1, &StudioPlugin::updateCallback, this);
+
+	if(_cball->isChecked())
+        	_subscriberBall = _nh->subscribe("/ball_locator_3d/pos_triangulated" , 1, &StudioPlugin::ballCallback, this);
+
+	_crobot->setEnabled(false);
+	_cball->setEnabled(false);
 
 	//ros::spin();
 
@@ -91,7 +100,15 @@ void StudioPlugin::updateCallback(const rovi2::State &state)
 
 void StudioPlugin::ballCallback(const rovi2::position3D &position)
 {
-	ROS_INFO("Test");
+	rw::math::Vector3D<double> transP(-0.116075, -1.67057, 1.33754);
+	rw::math::Rotation3D<double> transR(rw::math::RPY<double>(-0.0375525, -0.0132076, -2.0942).toRotation3D());
+	rw::math::Transform3D<double> trans(transP, transR);
+	rw::math::Vector3D<double> newPos(position.x, position.y, position.z);
+	newPos = trans*newPos;
+	rw::math::Transform3D<double> newTrans(newPos);
+	//newTrans = trans*newTrans;
+	_BallFrame->setTransform(newTrans, _state);
+	getRobWorkStudio()->setState(_state);
 
 }
 
