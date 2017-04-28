@@ -28,6 +28,7 @@
 /* DEFINES */
 #define SHOW_INPUT_STREAM true
 #define OUTPUT_TRIANGULATED_POINT false
+#define OUTPUT_RECT_AND_UNDIST_POINT false
 
 std::vector<float> calculate_3D_point(double left_x, double left_y, double right_x, double right_y)
 {
@@ -39,6 +40,7 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     right_point.at<Vec2d>(0)[0] = right_x;
     right_point.at<Vec2d>(0)[1] = right_y;
 
+    /* OLD CALIB, not enough dist coeffs */
     // Mat proj_l_ros = Mat::zeros(3,4,CV_64F);
     // proj_l_ros.at<double>(0,0) = 1337.227804;
     // proj_l_ros.at<double>(0,2) = 533.141155;
@@ -54,12 +56,78 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     // proj_r_ros.at<double>(1,2) = 467.337757;
     // proj_r_ros.at<double>(2,2) = 1.0;
 
+    /* LEFT CALIBRATION */
+    double img_width_l = 1024;
+    double img_height_l = 768;
+
+    Mat camera_matrix_l = Mat::zeros(3,3,CV_64F);
+    camera_matrix_l.at<double>(0,0) = 1366.940645;
+    // 0,1: zero
+    camera_matrix_l.at<double>(0,2) = 510.148527;
+    // 1,0: zero
+    camera_matrix_l.at<double>(1,1) = 1367.181188;
+    camera_matrix_l.at<double>(1,2) = 364.424779;
+    // 2,0: zero
+    // 2,1: zero
+    camera_matrix_l.at<double>(2,2) = 1;
+
+    Mat dist_coeffs_l = Mat::zeros(1,5,CV_64F);
+    dist_coeffs_l.at<double>(0,0) = -0.468731;
+    dist_coeffs_l.at<double>(0,1) =  0.476022;
+    dist_coeffs_l.at<double>(0,2) =  0.004279;
+    dist_coeffs_l.at<double>(0,3) =  0.000135;
+    dist_coeffs_l.at<double>(0,4) = -0.633893;
+
+    Mat rectification_l = Mat::zeros(3,3,CV_64F);
+    rectification_l.at<double>(0,0) =  0.999871;
+    rectification_l.at<double>(0,1) =  0.004958;
+    rectification_l.at<double>(0,2) = -0.015269;
+    rectification_l.at<double>(1,0) = -0.005083;
+    rectification_l.at<double>(1,1) =  0.999954;
+    rectification_l.at<double>(1,2) = -0.008142;
+    rectification_l.at<double>(2,0) =  0.015228;
+    rectification_l.at<double>(2,1) =  0.008219;
+    rectification_l.at<double>(2,2) =  0.999850;
+
     Mat proj_l_ros = Mat::zeros(3,4,CV_64F);
     proj_l_ros.at<double>(0,0) = 1333.329856;
     proj_l_ros.at<double>(0,2) = 537.019508;
     proj_l_ros.at<double>(1,1) =  1333.329856;
     proj_l_ros.at<double>(1,2) = 375.7627379;
     proj_l_ros.at<double>(2,2) = 1.0;
+
+    /* RIGHT CALIBRATION */
+    double img_width_r = 1024;
+    double img_height_r = 768;
+
+    Mat camera_matrix_r = Mat::zeros(3,3,CV_64F);
+    camera_matrix_r.at<double>(0,0) = 1372.805317;
+    // 0,1: zero
+    camera_matrix_r.at<double>(0,2) = 503.266067;
+    // 1,0: zero
+    camera_matrix_r.at<double>(1,1) = 1373.724158;
+    camera_matrix_r.at<double>(1,2) = 383.804262;
+    // 2,0: zero
+    // 2,1: zero
+    camera_matrix_r.at<double>(2,2) = 1;
+
+    Mat dist_coeffs_r = Mat::zeros(1,5,CV_64F);
+    dist_coeffs_r.at<double>(0,0) = -0.468950;
+    dist_coeffs_r.at<double>(0,1) =  0.542028;
+    dist_coeffs_r.at<double>(0,2) =  0.002906;
+    dist_coeffs_r.at<double>(0,3) =  0.003794;
+    dist_coeffs_r.at<double>(0,4) = -0.828583;
+
+    Mat rectification_r = Mat::zeros(3,3,CV_64F);
+    rectification_r.at<double>(0,0) =  0.999671;
+    rectification_r.at<double>(0,1) =  0.004195;
+    rectification_r.at<double>(0,2) = -0.025319;
+    rectification_r.at<double>(1,0) = -0.003988;
+    rectification_r.at<double>(1,1) =  0.999958;
+    rectification_r.at<double>(1,2) =  0.008232;
+    rectification_r.at<double>(2,0) =  0.025352;
+    rectification_r.at<double>(2,1) = -0.008128;
+    rectification_r.at<double>(2,2) =  0.999646;
 
     Mat proj_r_ros = Mat::zeros(3,4,CV_64F);
     proj_r_ros.at<double>(0,0) = 1333.329856;
@@ -69,18 +137,33 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     proj_r_ros.at<double>(1,2) = 375.762737;
     proj_r_ros.at<double>(2,2) = 1.0;
 
-    triangulatePoints(proj_l_ros,proj_r_ros,left_point,right_point,point_3D);
+    Mat left_point_undistorted(1, 1, CV_64FC2);
+    Mat right_point_undistorted(1, 1, CV_64FC2);
+
+    undistortPoints(left_point, left_point_undistorted, camera_matrix_l, dist_coeffs_l, rectification_l, camera_matrix_l);
+    undistortPoints(right_point, right_point_undistorted, camera_matrix_r, dist_coeffs_r, rectification_r, camera_matrix_r);
+
+    if (OUTPUT_RECT_AND_UNDIST_POINT) {
+        std::stringstream buffer_left;
+        buffer_left <<  "Left" << std::endl << "Org point: " << left_point.at<Vec2d>(0)[0] <<  ", " << left_point.at<Vec2d>(0)[1] << std::endl << "Undistorted point: " << left_point_undistorted.at<Vec2d>(0)[0] <<  ", " << left_point_undistorted.at<Vec2d>(0)[1] << std::endl;
+        ROS_ERROR("%s", buffer_left.str().c_str());
+
+        std::stringstream buffer_right;
+        buffer_right <<  "Right" << std::endl << "Org point: " << right_point.at<Vec2d>(0)[0] <<  ", " << right_point.at<Vec2d>(0)[1] << std::endl << "Undistorted point: " << right_point_undistorted.at<Vec2d>(0)[0] <<  ", " << right_point_undistorted.at<Vec2d>(0)[1] << std::endl;
+        ROS_ERROR("%s", buffer_right.str().c_str());
+    }
+
+    triangulatePoints(proj_l_ros,proj_r_ros,left_point_undistorted,right_point_undistorted,point_3D);
+
     std::vector<float> result_vec = {(float)(point_3D.at<Vec2d>(0)[0]/point_3D.at<Vec2d>(0)[3]), // THE RESULT IS LENGTH 4!!!!!!
                                    (float)(point_3D.at<Vec2d>(0)[1]/point_3D.at<Vec2d>(0)[3]),
                                    (float)(point_3D.at<Vec2d>(0)[2]/point_3D.at<Vec2d>(0)[3])};
 
     if (OUTPUT_TRIANGULATED_POINT) {
         std::stringstream buffer;
-        //buffer << std::endl << "3D point:" << std::endl << (point_3D / point_3D.at<double>(3, 0)) << std::endl;
-        //ROS_ERROR("%s", buffer.str().c_str());
         buffer << std::endl << "3D point:" << std::endl << result_vec.at(0) << std::endl << result_vec.at(1) << std::endl << result_vec.at(2) << std::endl;
         ROS_ERROR("%s", buffer.str().c_str());
-    }/* code */
+    }
     return result_vec;
 }
 
