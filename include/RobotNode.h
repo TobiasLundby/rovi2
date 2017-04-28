@@ -13,8 +13,11 @@
 #include <rovi2/MovePtp.h>
 #include <rovi2/State.h>
 #include <boost/thread/thread.hpp>
+#include <rw/math/Q.hpp>
 
 #define ROBOT_ip "192.168.100.4"
+
+
 
 class RobotNode_ros
 {

@@ -1,5 +1,6 @@
 #include "StudioPlugin.hpp"
 #include <QtPlugin>
+#include <QString>
 #include <vector>
 #include <utility>
 #include <string>
@@ -41,6 +42,8 @@ void StudioPlugin::open(rw::models::WorkCell *workcell)
 
 	_state =  _wc->getDefaultState();
 
+        _BallFrame = (rw::kinematics::MovableFrame*) _wc->findFrame("Ball");
+
 
 
 
@@ -49,19 +52,25 @@ void StudioPlugin::open(rw::models::WorkCell *workcell)
 void StudioPlugin::openROS()
 {
 
+	QString rosmaster = _rosmaster->toPlainText();
+	QString rosip = _rosip->toPlainText();
+	_rosmaster->setEnabled(false);
+	_rosip->setEnabled(false);
 	std::vector<std::pair<std::string, std::string> > args(0);
         args.push_back(std::make_pair<std::string, std::string> ("__name", "StudioPlugin"));
-        args.push_back(std::make_pair<std::string, std::string> ("__master","http://10.211.55.3:11311"));
+        args.push_back(std::make_pair<std::string, std::string> ("__master",rosmaster.toStdString()));
 	args.push_back(std::make_pair<std::string, std::string> ("__ns","rovi2"));
 
-        args.push_back(std::make_pair<std::string, std::string> ("__ip", "10.211.55.3"));
+        args.push_back(std::make_pair<std::string, std::string> ("__ip", rosip.toStdString()));
 
-        int argc = 0;
         ros::init(args, "StudioPlugin");
         _nh = new ros::NodeHandle;
 
-        _rosTimer->start(10);
+        _rosTimer->start(20);
         _btnROS->setEnabled(false);
+	
+	_subscriberState = _nh->subscribe("/rovi2/robot_node/Robot_state", 1, &StudioPlugin::updateCallback, this);
+        _subscriberBall = _nh->subscribe("/ball_locator_3d/pos_triangulated" , 1, &StudioPlugin::ballCallback, this);
 
 	//ros::spin();
 
@@ -72,6 +81,17 @@ void StudioPlugin::checkROS()
 {
 	ros::spinOnce();
 
+}
+
+void StudioPlugin::updateCallback(const rovi2::State &state)
+{
+	_device->setQ(toRw(state.q),_state);
+	_rws->setState(_state);
+}
+
+void StudioPlugin::ballCallback(const rovi2::position3D &position)
+{
+	ROS_INFO("Test");
 
 }
 

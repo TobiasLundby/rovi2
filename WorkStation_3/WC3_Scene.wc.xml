@@ -17,13 +17,24 @@
   </Frame>
   <Include file="WSG50/WSG50.wc.xml"/>
 
+ <Frame name="TempCam" refframe="WORLD">
+  <RPY> -90 0 -119 </RPY> <Pos> -1.9 0 2.3 </Pos>
+  </Frame>
+
+  <Frame name="Ball" refframe="TempCam" type="Movable">
+    <RPY> 0 0 0 </RPY> <Pos> 0 0 0.5 </Pos>
+    <Drawable name="BallGeo" refframe="Ball">
+     <RPY> 0 0 0 </RPY> <Pos> 0 0 0 </Pos>
+     <Polytope file="Geometry/Red_ball" />
+    </Drawable>
+   </Frame> 
 
  <Frame name="WorkPiece" refframe="WORLD">  
  <RPY>0 0 0.02 </RPY> <Pos> -0.09 -0.770 1.072 </Pos>
  </Frame>
 
   <Frame name="WPtable" refframe="WORLD" type="Movable">
-      <RPY> 0.0 0 0 </RPY> <Pos> -0.655 -0.136 1.060 </Pos>
+      <RPY> 0.0 0 0 </RPY> <Pos> -0.605 -0.086 1.110 </Pos>
      <Drawable name="WPtablegeo" refframe="WPtable" >
    <RPY> 0.0 0 0 </RPY> <Pos> -0.51 -0.65 -1.03</Pos>
    <Polytope file="Geometry/WPtable" />
