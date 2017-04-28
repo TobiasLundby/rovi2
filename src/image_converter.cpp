@@ -25,6 +25,9 @@ class ImageConverter
   ros::Publisher position_pub;
   ColorDetector * detector;
 
+  // Image storing
+  int image_number = 0;
+
 public:
   ImageConverter()
     : it_(nh_)
@@ -89,6 +92,10 @@ public:
         cv::imshow(OPENCV_WINDOW, cv_ptr->image);
     }
     cv::waitKey(3);
+    std::string image_name = "home/mathias/Desktop/images/calib" + std::to_string(image_number) + ".jpg";
+    ROS_INFO("%s",image_name);
+    cv::imwrite("/home/mathias/Desktop/images/calib0.png",cv_ptr->image);
+    image_number++;
 
     // Output modified video stream
     image_pub_.publish(cv_ptr->toImageMsg());
