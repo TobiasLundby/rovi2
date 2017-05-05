@@ -170,15 +170,19 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
 void callback(
     const sensor_msgs::ImageConstPtr& image_left,
     const sensor_msgs::ImageConstPtr& image_right,
-    image_transport::Publisher& image_pub_left_ptr,
-    image_transport::Publisher& image_pub_right_ptr,
-    ros::Publisher& pos_pub_left_ptr,
-    ros::Publisher& pos_pub_right_ptr,
+    /*image_transport::Publisher& image_pub_left_ptr,
+    image_transport::Publisher& image_pub_right_ptr,*/
+    /*ros::Publisher& pos_pub_left_ptr,
+    ros::Publisher& pos_pub_right_ptr,*/
     ros::Publisher& pos_pub_triangulated_ptr,
     ColorDetector& deterctor_left_obj_ptr,
-    ColorDetector& deterctor_right_obj_ptr
+    ColorDetector& deterctor_right_obj_ptr,
+    cv::KalmanFilter KF_ptr,
+    ros::Publisher& kalman_pub_estimate_ptr,
+    ros::Publisher& kalman_pub_prediction_ptr
 )
 {
+    /* PUBLISH of diables arguments are commented out at publish point below*/
     cv_bridge::CvImagePtr cv_left_ptr, cv_right_ptr;
     try
     {
@@ -199,8 +203,8 @@ void callback(
     cv::waitKey(3);
 
     // Output modified video stream
-    image_pub_left_ptr.publish(cv_left_ptr->toImageMsg());
-    image_pub_right_ptr.publish(cv_right_ptr->toImageMsg());
+    //image_pub_left_ptr.publish(cv_left_ptr->toImageMsg());
+    //image_pub_right_ptr.publish(cv_right_ptr->toImageMsg());
 
     // Find the left ball
     std::vector<Point2f> position_left;
@@ -211,7 +215,7 @@ void callback(
         rovi2::position2D msg;
         msg.x = (float)position_left.at(0).x;
         msg.y = (float)position_left.at(0).y;
-        pos_pub_left_ptr.publish(msg); // Publish it
+        //pos_pub_left_ptr.publish(msg); // Publish it
     }
 
     // Find the right ball
@@ -223,22 +227,40 @@ void callback(
         rovi2::position2D msg;
         msg.x = (float)position_right.at(0).x;
         msg.y = (float)position_right.at(0).y;
-        pos_pub_right_ptr.publish(msg); // Publish it
+        //pos_pub_right_ptr.publish(msg); // Publish it
     }
 
+    rovi2::position3D msg;
+    Mat_<float> measurement(3,1);
+    measurement.setTo(Scalar(0));
     // Triangulation here
     if(position_right.size() > 0 and position_left.size() > 0 ) {
         std::vector<float> triangluated_point;
         triangluated_point = calculate_3D_point((double)position_left.at(0).x, (double)position_left.at(0).y, (double)position_right.at(0).x, (double)position_right.at(0).y);
         if(triangluated_point.size() > 0)
         {
-            rovi2::position3D msg;
             msg.x = (float)triangluated_point.at(0);
             msg.y = (float)triangluated_point.at(1);
             msg.z = (float)triangluated_point.at(2);
             pos_pub_triangulated_ptr.publish(msg); // Publish it
+
+            //Kalman filter the pos and predict; using KF_ptr
+            measurement(0) = (float)triangluated_point.at(0);
+            measurement(1) = (float)triangluated_point.at(1);
+            measurement(2) = (float)triangluated_point.at(2);
+
+            Mat estimated = KF_ptr.correct(measurement);
+            msg.x = estimated.at<float>(0);
+            msg.y = estimated.at<float>(1);
+            msg.z = estimated.at<float>(2);
+            kalman_pub_estimate_ptr.publish(msg); // Publish it
         }
     }
+    Mat prediction = KF_ptr.predict();
+    msg.x = prediction.at<float>(0);
+    msg.y = prediction.at<float>(1);
+    msg.z = prediction.at<float>(2);
+    kalman_pub_prediction_ptr.publish(msg); // Publish it
 }
 
 int main(int argc, char** argv)
@@ -299,9 +321,9 @@ int main(int argc, char** argv)
     std::string output_topic_position_left = node_name + "/pos_left";
     std::string output_topic_position_right = node_name + "/pos_right";
     std::string output_topic_position_triangulated = node_name + "/pos_triangulated";
-    ros::Publisher position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1000);
-    ros::Publisher position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1000);
-    ros::Publisher position_pub_triangulated = nh_.advertise<rovi2::position3D>(output_topic_position_triangulated,1000);
+    ros::Publisher position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
+    ros::Publisher position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
+    ros::Publisher position_pub_triangulated = nh_.advertise<rovi2::position3D>(output_topic_position_triangulated,1);
 
     // Ball detector objects; two have been made if different settings are required later
     ColorDetector detector_left;
@@ -309,7 +331,52 @@ int main(int argc, char** argv)
     ColorDetector detector_right;
     detector_right.set_result_window_name("Right result 2D");
 
-    sync.registerCallback(boost::bind(&callback, _1, _2, image_pub_left, image_pub_right, position_pub_left, position_pub_right, position_pub_triangulated, detector_left, detector_right));
+    // Kalman filter
+    float delta_t = 1/15;
+    cv::KalmanFilter KF(9, 3, 0);
+
+    // intialization of KF...
+    KF.transitionMatrix = (Mat_<float>(9, 9) <<
+    1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
+    0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,
+    0,0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),
+    0,0,0,delta_t,0,0,1,0,0,
+    0,0,0,0,delta_t,0,0,1,0,
+    0,0,0,0,0,delta_t,0,0,1,
+    0,0,0,0,0,0,1,0,0,
+    0,0,0,0,0,0,0,1,0,
+    0,0,0,0,0,0,0,0,1);
+
+    //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
+    KF.statePre.at<float>(0) = 0; //x
+    KF.statePre.at<float>(1) = 0; //y
+    KF.statePre.at<float>(2) = 1.20; //z
+    KF.statePre.at<float>(3) = 0; //xdot
+    KF.statePre.at<float>(4) = 0; //ydot
+    KF.statePre.at<float>(5) = 0; //zdot
+    KF.statePre.at<float>(6) = 0; //xdotdot
+    KF.statePre.at<float>(7) = 0; //ydotdot
+    KF.statePre.at<float>(8) = 0; //zdotdot
+
+    setIdentity(KF.measurementMatrix);
+    /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
+    setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
+    /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
+    setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement of pixel can deviate with 20
+    /* Initial error */
+    setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+
+    // Kalman publisher
+    std::string kalman_estimate_str = node_name + "/kalman_estimate";
+    std::string kalman_prediction_str = node_name + "/kalman_prediction";
+    ros::Publisher kalman_pub_estimate = nh_.advertise<rovi2::position3D>(kalman_estimate_str,1);
+    ros::Publisher kalman_pub_prediction = nh_.advertise<rovi2::position3D>(kalman_prediction_str,1);
+
+    sync.registerCallback(boost::bind(&callback, _1, _2,
+        /*image_pub_left, image_pub_right,*/
+        /*position_pub_left, position_pub_right,*/ position_pub_triangulated,
+        detector_left, detector_right,
+        KF,kalman_pub_estimate,kalman_pub_prediction));
 
     while( ros::ok() ){
         ros::spin();
