@@ -15,6 +15,8 @@
 #include <boost/algorithm/string.hpp>
 #include <stdlib.h>
 #include "Astar.hpp"
+#include <time.h>
+#include <stdio.h>
 
 
 Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
@@ -744,9 +746,12 @@ void Roadmap::load_roadmap(std::string path)
 
 int main(int argc, char **argv)
 {
+  time_t start, end;
+
+  time(&start);
   ros::init(argc,argv,"roadmap");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(50000, 0.005, 1, 0.5);
+  Roadmap Roadmap_ros(1000, 0.005, 1, 0.5);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -758,6 +763,13 @@ int main(int argc, char **argv)
   
   Roadmap_ros.connectedComponents();
   Roadmap_ros.save_roadmap("test5.txt");
+ 
+  time(&end);
+  double dif = difftime(end, start);
+
+  std::stringstream ti;
+  ti << "Used time for creation in seconds: " << dif << std::endl; 
+  ROS_INFO("%s", ti.str().c_str());
   
 
 
