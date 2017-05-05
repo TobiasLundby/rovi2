@@ -76,7 +76,7 @@ void StudioPlugin::openROS()
 		_subscriberState = _nh->subscribe("/rovi2/robot_node/Robot_state", 1, &StudioPlugin::updateCallback, this);
 
 	if(_cball->isChecked())
-        	_subscriberBall = _nh->subscribe("/ball_locator_3d/pos_triangulated" , 1, &StudioPlugin::ballCallback, this);
+        	_subscriberBall = _nh->subscribe("/ball_locator_3d/kalman_prediction" , 1, &StudioPlugin::ballCallback, this);
 
 	_crobot->setEnabled(false);
 	_cball->setEnabled(false);

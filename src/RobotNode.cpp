@@ -12,7 +12,7 @@ RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 	RobotNode_ros::initWorkCell();
 	RobotNode_ros::initDevice();
 	service_nonlinear = _nodehandle.advertiseService("rovi2/robot_node/Move_nonlinear_ptp", &RobotNode_ros::Move_nonlinear_ptp, this);
-        state_updater = _nodehandle.advertise<rovi2::State>("rovi2/robot_node/Robot_state", 1000);
+        state_updater = _nodehandle.advertise<rovi2::State>("rovi2/robot_node/Robot_state", 1);
 };
 
 RobotNode_ros::~RobotNode_ros()

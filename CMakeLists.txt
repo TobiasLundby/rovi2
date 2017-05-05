@@ -129,7 +129,7 @@ if (SHOULD_BUILD)
   #target_link_libraries(offboard_node ${catkin_LIBRARIES})
   #add_dependencies(offboard_node geometry_msgs mavros_msgs mavros roscpp rospy std_msgs)
 
-  add_executable(Roadmap src/Roadmap.cpp)
+  add_executable(Roadmap src/Roadmap.cpp src/Astar.cpp)
   target_link_libraries(Roadmap ${ROBWORK_LIBRARIES} ${catkin_LIBRARIES})
   add_dependencies(Roadmap std_msgs)
 
