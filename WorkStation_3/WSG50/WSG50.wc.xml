@@ -69,5 +69,6 @@
  </Drawable>
 
  <CollisionSetup file="CollisionSetup.prox.xml" />
+ <Q name="Home">0.055</Q>
 
 </TreeDevice>

@@ -18,26 +18,43 @@
 #include <rw/pathplanning/QSampler.hpp>
 #include <rwlibs/algorithms/kdtree/KDTreeQ.hpp>
 
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+//#include <boost/thread/lock_guard.hpp>
+#include <boost/bind.hpp>
+
+#define SINGLE_THREAD false
+
+
+class Astar;
+
 
 
 
 class Node
 {
 public:
- 	Node(rw::math::Q p, int nodeid){ q_val = p; edges = std::vector<Node*>(0); nodenum = nodeid;}
+ 	Node(rw::math::Q p, int nodeid){ q_val = p; edges = std::vector<Node*>(0); edge_cost = std::vector<double>(0); nodenum = nodeid;}
 	~Node();
 	 
-	void add_edge(Node* e){ edges.push_back(e);}
 
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
+	std::vector<double> edge_cost;
         bool connected_component = false;
         bool usable = false;
 	int nodenum;
+
+	unsigned int astar_run = 0;
+	double g_score;
+	double f_score;
+	bool closed;
+	bool open;
+	Node* cameFrom;
 };
 
 
-bool Sorting(std::vector<Node*> i, std::vector<Node*> j) { return i.size() > j.size(); }
+
 
 class Roadmap
 {
@@ -78,6 +95,11 @@ protected:
 	bool inCollision(Node *n);
 	bool inCollision(Node *a, Node *b);
 
+	void threadAdd1(Node* A, Node* B);
+	void threadAdd2(Node* A, Node* B);
+	void threadAdd3(Node* A, Node* B);
+	void threadAdd4(Node* A, Node* B);
+
 	bool distanceTooClose(rw::math::Q a);
 
 	// These are not checked for collision!
@@ -88,12 +110,14 @@ protected:
 	bool addNode();
 
 	std::vector<Node*> nodesInRange(Node *a); 
-	void addEdges(std::vector<Node*> n, Node *a);
+	void addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost = std::vector<double>(0));
 	void connectGraph();
 
 	int nonConnectedNodes();
 
 	void load_roadmap(std::string path);
+
+	static bool Sorting(const std::vector<Node*> i, const std::vector<Node*> j) { return i.size() > j.size(); }
 
 
 
@@ -104,18 +128,41 @@ protected:
 
 
 public:
-  	rw::models::WorkCell::Ptr _workcell = nullptr;
-	rw::kinematics::State _state;
-  	rw::models::Device::Ptr _device;
-	rw::proximity::CollisionDetector::Ptr _detector;
-	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint;
-	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint;
-	rw::proximity::CollisionStrategy::Ptr _strategy;
+  	rw::models::WorkCell::Ptr _workcell1 = nullptr;
+  	rw::models::WorkCell::Ptr _workcell2 = nullptr;
+  	rw::models::WorkCell::Ptr _workcell3 = nullptr;
+  	rw::models::WorkCell::Ptr _workcell4 = nullptr;
+	rw::kinematics::State _state1;
+	rw::kinematics::State _state2;
+	rw::kinematics::State _state3;
+	rw::kinematics::State _state4;
+  	rw::models::Device::Ptr _device1;
+  	rw::models::Device::Ptr _device2;
+  	rw::models::Device::Ptr _device3;
+  	rw::models::Device::Ptr _device4;
+	rw::proximity::CollisionDetector::Ptr _detector1;
+	rw::proximity::CollisionDetector::Ptr _detector2;
+	rw::proximity::CollisionDetector::Ptr _detector3;
+	rw::proximity::CollisionDetector::Ptr _detector4;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint1;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint2;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint3;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint4;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint1;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint2;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint3;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint4;
+	rw::proximity::CollisionStrategy::Ptr _strategy1;
+	rw::proximity::CollisionStrategy::Ptr _strategy2;
+	rw::proximity::CollisionStrategy::Ptr _strategy3;
+	rw::proximity::CollisionStrategy::Ptr _strategy4;
 	rw::pathplanning::QSampler::Ptr _sampler;
 	rw::math::Q _metricWeights;
 	rw::math::QMetric::Ptr _metric;
 	rw::math::Q _radi;
 	rw::math::Q _radi2;
+
+	Astar *_astar;
 
 	// KdTree for nearest neighbor search.
         rwlibs::algorithms::KDTreeQ<Node*>::Ptr  _kdtree;
@@ -132,6 +179,14 @@ public:
 	double _max_density;
 	double _usable_nodes;
 	double _largestConnected = 0;
+
+	int t1Usage = 0;
+	int t2Usage = 0;
+	int t3Usage = 0;
+	int t4Usage = 0;
+
+	boost::mutex push_lock;
+	std::vector<boost::thread*> threads;
 	
 
 };
