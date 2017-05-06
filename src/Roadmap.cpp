@@ -427,7 +427,7 @@ int Roadmap::nonConnectedNodes()
 void Roadmap::initWorkCell()
 {
 
-	rw::math::Math::seed(1234);
+	rw::math::Math::seed();
 	std::string path = ros::package::getPath("rovi2") + "/WorkStation_3/WC3_Scene.wc.xml";
 	_workcell1 = rw::loaders::WorkCellLoader::Factory::load(path);
 	_workcell2 = rw::loaders::WorkCellLoader::Factory::load(path);
