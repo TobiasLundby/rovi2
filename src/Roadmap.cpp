@@ -17,6 +17,7 @@
 #include "Astar.hpp"
 #include <time.h>
 #include <stdio.h>
+#include <iomanip>
 
 
 Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
@@ -384,10 +385,10 @@ bool Roadmap::create_roadmap()
 		std::stringstream creating;
 		creating << "Creating Node: " << _actualSize +1 << " of " << _size << std::endl;
 		ROS_INFO("%s", creating.str().c_str());
-		for(int i = 0; i< 1000; i++)
+		for(int i = 0; i< 10000; i++)
 			if(addNode())
 				break;
-			else if(i == 999)
+			else if(i == 9999)
 				return false;
 		
 	}
@@ -751,7 +752,7 @@ int main(int argc, char **argv)
   time(&start);
   ros::init(argc,argv,"roadmap");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(1000000, 0.005, 1, 0.5);
+  Roadmap Roadmap_ros(1000000, 0.001, 0.2, 0.01);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -762,7 +763,7 @@ int main(int argc, char **argv)
 	ROS_INFO("Could not create Roadmap!");
   
   Roadmap_ros.connectedComponents();
-  Roadmap_ros.save_roadmap("Roadmap_1000000_0p005_1_0p5_first.txt");
+  Roadmap_ros.save_roadmap("Roadmap_1000000_0p001_0p2_0p01_first.txt");
  
   time(&end);
   double dif = difftime(end, start);
