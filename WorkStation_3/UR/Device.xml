@@ -1,9 +1,9 @@
-  <PosLimit refjoint="Joint1" min="-359" max="359" />
-  <PosLimit refjoint="Joint2" min="-359" max="359" />
-  <PosLimit refjoint="Joint3" min="-359" max="359" />
-  <PosLimit refjoint="Joint4" min="-359" max="359" />
-  <PosLimit refjoint="Joint5" min="-359" max="359" />
-  <PosLimit refjoint="Joint6" min="-359" max="359" />
+  <PosLimit refjoint="Joint1" min="-230" max="230" />
+  <PosLimit refjoint="Joint2" min="-180" max="0" />
+  <PosLimit refjoint="Joint3" min="-180" max="180" />
+  <PosLimit refjoint="Joint4" min="-270" max="180" />
+  <PosLimit refjoint="Joint5" min="-180" max="180" />
+  <PosLimit refjoint="Joint6" min="-180" max="180" />
 
   <VelLimit refjoint="Joint1" max="200.5" />
   <VelLimit refjoint="Joint2" max="200.5" />

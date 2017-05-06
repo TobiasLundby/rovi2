@@ -427,7 +427,7 @@ int Roadmap::nonConnectedNodes()
 void Roadmap::initWorkCell()
 {
 
-	rw::math::Math::seed();
+	rw::math::Math::seed(1234);
 	std::string path = ros::package::getPath("rovi2") + "/WorkStation_3/WC3_Scene.wc.xml";
 	_workcell1 = rw::loaders::WorkCellLoader::Factory::load(path);
 	_workcell2 = rw::loaders::WorkCellLoader::Factory::load(path);
@@ -751,7 +751,7 @@ int main(int argc, char **argv)
   time(&start);
   ros::init(argc,argv,"roadmap");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(1000, 0.005, 1, 0.5);
+  Roadmap Roadmap_ros(50000, 0.005, 1, 0.5);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -762,7 +762,7 @@ int main(int argc, char **argv)
 	ROS_INFO("Could not create Roadmap!");
   
   Roadmap_ros.connectedComponents();
-  Roadmap_ros.save_roadmap("test5.txt");
+  Roadmap_ros.save_roadmap("Roadmap_50000_0p005_1_0p5_second.txt");
  
   time(&end);
   double dif = difftime(end, start);
