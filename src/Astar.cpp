@@ -59,7 +59,7 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 
 	// Init start Node (Root)
 	_graph->at(startNodeId)->g_score = 0;
-	_graph->at(startNodeId)->f_score = 1;//calc_h(startNodeId, goalNodeId);
+	_graph->at(startNodeId)->f_score = calc_h(startNodeId, goalNodeId);
 	_graph->at(startNodeId)->astar_run = _numRun;
 	_graph->at(startNodeId)->closed = false;
 	_graph->at(startNodeId)->open = true;
@@ -97,7 +97,7 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 			if(current->edges.at(i)->closed == false)	
 			{
 				double _g_score = current->g_score + current->edge_cost.at(i);
-				double _f_score = current->edges.at(i)->g_score + 1; //calc_h(current->edges.at(i)->nodenum, goalNodeId);
+				double _f_score = current->edges.at(i)->g_score + calc_h(current->edges.at(i)->nodenum, goalNodeId);
 				if(current->edges.at(i)->open == false)
 				{	
 					current->edges.at(i)->open = true;

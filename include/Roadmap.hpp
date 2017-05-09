@@ -176,11 +176,10 @@ public:
 	rw::proximity::CollisionStrategy::Ptr _strategyAstar;
 	rw::pathplanning::QSampler::Ptr _sampler;
 	rw::math::Q _metricWeights;
-	rw::math::QMetric::Ptr _metric;
+	rw::math::QMetric::Ptr _metric = nullptr;
 	rw::math::Q _radi;
 	rw::math::Q _radi2;
 
-	Astar *_astar;
 
 	// KdTree for nearest neighbor search.
         rwlibs::algorithms::KDTreeQ<Node*>::Ptr  _kdtree;

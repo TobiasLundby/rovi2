@@ -30,11 +30,9 @@ Roadmap::Roadmap(ros::NodeHandle h, int size, double resolution, double connecti
 	_nodehandle(h)
 
 {
-	if(_workcell1 == nullptr)
-	{
-		initWorkCell();
-	}
 
+	initWorkCell();
+	
 	initRobworkStuff();
 
 	threads.push_back(nullptr);
@@ -45,7 +43,6 @@ Roadmap::Roadmap(ros::NodeHandle h, int size, double resolution, double connecti
 	std::stringstream buffer;
 	buffer << "Default state: " << _device1->getQ(_state1) << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
-	_astar = new Astar(_size, _graph, _metric, _constraint1, _edgeConstraint1);
 	
 
 };
@@ -53,9 +50,11 @@ Roadmap::Roadmap(ros::NodeHandle h, int size, double resolution, double connecti
 Roadmap::Roadmap(ros::NodeHandle h, std::string path)
 {
 	initWorkCell();
-        load_roadmap(path);
 
-	Roadmap(h, _size, _resolution, _connection_radius, _max_density);
+        load_roadmap(path);
+	initRobworkStuff();
+
+	//Roadmap(h, _size, _resolution, _connection_radius, _max_density);
 
         int non = nonConnectedNodes();
 
@@ -107,13 +106,10 @@ bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &
 
 	if(astar_thread == nullptr)
 	{
-		ROS_INFO("Im here1");
 		rw::math::Q init = Roadmap::toRw(request.init);
 		rw::math::Q goal = Roadmap::toRw(request.goal);
-		ROS_INFO("Im here2");
 		astar_thread = new boost::thread(boost::bind(&Roadmap::find_path, this, init, goal));
 		res.success = true;
-		ROS_INFO("Im here3");
 	}
 
 
@@ -125,10 +121,8 @@ bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &
 
 void Roadmap::find_path(rw::math::Q init, rw::math::Q goal)
 {
-	ROS_INFO("Im here4");
 	int initId = _kdtree->nnSearch(init).value->nodenum;
 	int goalId = _kdtree->nnSearch(goal).value->nodenum;
-	ROS_INFO("Im here5");
 	std::vector<int> path(0);
 	if(initId != goalId)
 		planner->find_path(initId, goalId, path);
