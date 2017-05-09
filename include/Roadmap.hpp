@@ -197,6 +197,7 @@ public:
 	int t4Usage = 0;
 
 	boost::mutex push_lock;
+	boost::mutex astar;
 	std::vector<boost::thread*> threads;
 
 	ros::ServiceServer service_start_plan;

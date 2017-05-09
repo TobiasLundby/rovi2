@@ -204,6 +204,7 @@ std::vector<Node*> Roadmap::nodesInRange(Node *a)
 void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost)
 {
 	std::vector<Node*> addAble(0);
+	
 	for(int i = 0; i< n.size(); i++)
 	{
 		bool already_edge = true;
@@ -259,7 +260,7 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 	}
 	
 
-	if(!SINGLE_THREAD)
+	if(!SINGLE_THREAD && check)
 	{
 		int i = 0;
 		while( i< addAble.size())
@@ -823,7 +824,7 @@ int main(int argc, char **argv)
    std::stringstream buffer;
 	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" <<     std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
-   //Roadmap_ros.connectedComponents();
+   Roadmap_ros.connectedComponents();
 
 
 
