@@ -7,6 +7,8 @@
 #include <rw/models/Device.hpp>
 #include <rw/rw.hpp>
 #include <rw/math/Q.hpp>
+#include "rovi2/Q.h"
+#include "rovi2/Plan.h"
 //#include <rw/math/QMetric.hpp>
 #include <rwlibs/proximitystrategies/ProximityStrategyPQP.hpp>
 #include <rw/pathplanning/PlannerConstraint.hpp>
@@ -60,13 +62,16 @@ class Roadmap
 {
 public:
 
-	Roadmap(int size, double resolution, double connection_radius, double max_density); 
-	Roadmap(std::string path);
+	Roadmap(ros::NodeHandle h, int size, double resolution, double connection_radius, double max_density); 
+	Roadmap(ros::NodeHandle h,std::string path);
 
 	virtual ~Roadmap();
 
         bool create_roadmap();
         void save_roadmap(std::string path);
+
+
+	rw::math::Q toRw(const rovi2::Q& q);
 
 
 	
@@ -80,6 +85,9 @@ public:
 	void distance_to_goal(rw::math::Q init, rw::math::Q goal);
 
 	void connectedComponents();
+
+
+	bool start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res);
 	 
  
 
@@ -89,6 +97,8 @@ public:
 protected:
 	void initWorkCell();
 	void initRobworkStuff();
+
+	
 
 	// Find connection node for init and goal from a Q position
 	Node* find_connection_node(rw::math::Q);
@@ -104,6 +114,7 @@ protected:
 
 	// These are not checked for collision!
 	void addNode(rw::math::Q n, int nodeid, bool c, bool u);
+	void addNode(rw::math::Q n, int nodeid);
 	void addEdges(int nodeidA, int nodeidB);
 
 	// Add a new samples node
@@ -187,6 +198,9 @@ public:
 
 	boost::mutex push_lock;
 	std::vector<boost::thread*> threads;
+
+	ros::ServiceServer service_start_plan;
+	ros::NodeHandle _nodehandle;
 	
 
 };

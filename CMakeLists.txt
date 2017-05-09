@@ -52,6 +52,7 @@ if (SHOULD_BUILD)
   add_service_files(
     FILES
     MovePtp.srv
+    Plan.srv
     )
 
 	add_message_files(

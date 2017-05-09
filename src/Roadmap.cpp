@@ -20,12 +20,14 @@
 #include <iomanip>
 
 
-Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
+
+Roadmap::Roadmap(ros::NodeHandle h, int size, double resolution, double connection_radius, double max_density):
 
 	_resolution(resolution),
 	_size(size),
 	_connection_radius(connection_radius),
-	_max_density(max_density)
+	_max_density(max_density),
+	_nodehandle(h)
 
 {
 	if(_workcell1 == nullptr)
@@ -48,12 +50,12 @@ Roadmap::Roadmap(int size, double resolution, double connection_radius, double m
 
 };
 
-Roadmap::Roadmap(std::string path)
+Roadmap::Roadmap(ros::NodeHandle h, std::string path)
 {
 	initWorkCell();
         load_roadmap(path);
 
-	Roadmap(_size, _resolution, _connection_radius, _max_density);
+	Roadmap(h, _size, _resolution, _connection_radius, _max_density);
 
         int non = nonConnectedNodes();
 
@@ -61,6 +63,8 @@ Roadmap::Roadmap(std::string path)
 	buffer << "ConnectedNodes: " << _actualSize - non << " , nonConnectedNodes: " << non << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
+	service_start_plan = _nodehandle.advertiseService("rovi2/Roadmap/StartPlan", &Roadmap::start_plan, this);
+	
 
 
 }
@@ -68,6 +72,31 @@ Roadmap::Roadmap(std::string path)
 Roadmap::~Roadmap()
 {
 };
+
+/************************************************************************
+ * Q  -> lend from Caros
+ ************************************************************************/
+rw::math::Q Roadmap::toRw(const rovi2::Q& q)
+{
+  rw::math::Q res(q.data.size());
+  for (std::size_t i = 0; i < q.data.size(); ++i)
+  {
+    res(i) = q.data[i];
+  }
+  return res;
+}
+
+
+bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res)
+{
+	rw::math::Q init = Roadmap::toRw(request.init);
+	rw::math::Q goal = Roadmap::toRw(request.goal);
+
+	res.success = true;
+
+	return true;
+
+}
 
 bool Roadmap::inCollision(Node *n)
 {
@@ -90,6 +119,18 @@ void Roadmap::addNode(rw::math::Q n, int nodeid, bool c, bool u)
 	tempNode->connected_component = c;
 	tempNode->usable = u;
 	_graph->push_back(tempNode);
+	if(u)
+		_kdtree->addNode(n, tempNode);
+	 
+
+};
+
+void Roadmap::addNode(rw::math::Q n, int nodeid)
+{
+	Node* tempNode = new Node(n, nodeid);
+	tempNode->connected_component = false;
+	tempNode->usable = false;
+	_graph->push_back(tempNode);
 	_kdtree->addNode(n, tempNode);
 	 
 
@@ -102,7 +143,7 @@ bool Roadmap::addNode()
 		return false;
 	else if(!distanceTooClose(sample))
 	{
-		addNode(sample, _actualSize, false, false);
+		addNode(sample, _actualSize);
 		_actualSize++;
 		return true;
 	}
@@ -734,7 +775,7 @@ void Roadmap::load_roadmap(std::string path)
 				c.push_back(std::atof(strs.at(i+1).c_str()));
 			}
 			
-
+			
 			addEdges(t, _graph->at(std::atoi(strs.at(0).c_str())), false, c);			
 
 		}
@@ -750,9 +791,9 @@ int main(int argc, char **argv)
   time_t start, end;
 
   time(&start);
-  ros::init(argc,argv,"roadmap");
+  ros::init(argc,argv,"roadmap81");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(1000000, 0.001, 0.2, 0.01);
+  /*Roadmap Roadmap_ros(n, 3000000, 0.01, 0.3, 0.15);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -763,7 +804,7 @@ int main(int argc, char **argv)
 	ROS_INFO("Could not create Roadmap!");
   
   Roadmap_ros.connectedComponents();
-  Roadmap_ros.save_roadmap("Roadmap_1000000_0p001_0p2_0p01_first.txt");
+  Roadmap_ros.save_roadmap("Roadmap_3000000_0p01_0p3_0p15_first.txt");
  
   time(&end);
   double dif = difftime(end, start);
@@ -773,18 +814,18 @@ int main(int argc, char **argv)
   ROS_INFO("%s", ti.str().c_str());
   
 
+*/
 
 
 
-
-  /*
-   Roadmap Roadmap_ros("test5.txt");
+  
+   Roadmap Roadmap_ros(n, "Roadmap_50000_0p005_1_0p5_first.txt");
    std::stringstream buffer;
 	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" <<     std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
-   Roadmap_ros.connectedComponents();
+   //Roadmap_ros.connectedComponents();
 
-*/
+
 
 
 
