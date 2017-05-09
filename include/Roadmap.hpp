@@ -143,30 +143,37 @@ public:
   	rw::models::WorkCell::Ptr _workcell2 = nullptr;
   	rw::models::WorkCell::Ptr _workcell3 = nullptr;
   	rw::models::WorkCell::Ptr _workcell4 = nullptr;
+	rw::models::WorkCell::Ptr _workcellAstar = nullptr;
 	rw::kinematics::State _state1;
 	rw::kinematics::State _state2;
 	rw::kinematics::State _state3;
 	rw::kinematics::State _state4;
+	rw::kinematics::State _stateAstar;
   	rw::models::Device::Ptr _device1;
   	rw::models::Device::Ptr _device2;
   	rw::models::Device::Ptr _device3;
   	rw::models::Device::Ptr _device4;
+	rw::models::Device::Ptr _deviceAstar;
 	rw::proximity::CollisionDetector::Ptr _detector1;
 	rw::proximity::CollisionDetector::Ptr _detector2;
 	rw::proximity::CollisionDetector::Ptr _detector3;
 	rw::proximity::CollisionDetector::Ptr _detector4;
+	rw::proximity::CollisionDetector::Ptr _detectorAstar;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint1;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint2;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint3;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint4;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraintAstar;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint1;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint2;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint3;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint4;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraintAstar;
 	rw::proximity::CollisionStrategy::Ptr _strategy1;
 	rw::proximity::CollisionStrategy::Ptr _strategy2;
 	rw::proximity::CollisionStrategy::Ptr _strategy3;
 	rw::proximity::CollisionStrategy::Ptr _strategy4;
+	rw::proximity::CollisionStrategy::Ptr _strategyAstar;
 	rw::pathplanning::QSampler::Ptr _sampler;
 	rw::math::Q _metricWeights;
 	rw::math::QMetric::Ptr _metric;
@@ -197,6 +204,10 @@ public:
 	int t4Usage = 0;
 
 	boost::mutex push_lock;
+	boost::mutex astar_lock;
+	bool astar_running = false;
+	Astar *planner;
+	boost::thread* astar_thread = nullptr;
 	std::vector<boost::thread*> threads;
 
 	ros::ServiceServer service_start_plan;
