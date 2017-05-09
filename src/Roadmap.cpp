@@ -63,7 +63,7 @@ Roadmap::Roadmap(ros::NodeHandle h, std::string path)
 	buffer << "ConnectedNodes: " << _actualSize - non << " , nonConnectedNodes: " << non << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
-	//planner = new Astar(_size, _graph, 	rw::math::QMetric::Ptr metric, rw::common::Ptr<rw::pathplanning::QConstraint> constraint, 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> edgeConstraint);
+	planner = new Astar(_size, _graph, _metric, _constraintAstar, _edgeConstraintAstar);
 	service_start_plan = _nodehandle.advertiseService("rovi2/Roadmap/StartPlan", &Roadmap::start_plan, this);
 	
 
@@ -90,18 +90,56 @@ rw::math::Q Roadmap::toRw(const rovi2::Q& q)
 
 bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res)
 {
-	/*if(astar_thread == nullptr)
-		astar_thread = new boost::thread(boost::bind(&Roadmap::threadAdd1, this, a, addAble[i]));
-	boost::mutex::scoped_lock lock(astar_lock);
-	if(!astar_running)
-	
-	boost::mutex::scoped_lock unlock(astar_lock);
-	rw::math::Q init = Roadmap::toRw(request.init);
-	rw::math::Q goal = Roadmap::toRw(request.goal);
+	if(astar_thread != nullptr)
+	{
+		ROS_INFO("Im here0");
+		if(astar_thread->joinable())
+		{
+			astar_thread->join();
+			delete astar_thread;
+			astar_thread = nullptr;
+		}
+		else
+			res.success = false;
 
-	res.success = true;
-	*/
+	}
+
+
+	if(astar_thread == nullptr)
+	{
+		ROS_INFO("Im here1");
+		rw::math::Q init = Roadmap::toRw(request.init);
+		rw::math::Q goal = Roadmap::toRw(request.goal);
+		ROS_INFO("Im here2");
+		astar_thread = new boost::thread(boost::bind(&Roadmap::find_path, this, init, goal));
+		res.success = true;
+		ROS_INFO("Im here3");
+	}
+
+
+
+	
 	return true;
+
+}
+
+void Roadmap::find_path(rw::math::Q init, rw::math::Q goal)
+{
+	ROS_INFO("Im here4");
+	int initId = _kdtree->nnSearch(init).value->nodenum;
+	int goalId = _kdtree->nnSearch(goal).value->nodenum;
+	ROS_INFO("Im here5");
+	std::vector<int> path(0);
+	if(initId != goalId)
+		planner->find_path(initId, goalId, path);
+	
+	ROS_INFO("Im here6");
+
+	std::stringstream path_length;
+	path_length << "Path_length: " << path.size() << std::endl;
+	ROS_INFO("%s", path_length.str().c_str());
+	
+
 
 }
 
@@ -492,10 +530,14 @@ void Roadmap::initWorkCell()
 	_device3 = _workcell3->findDevice("UR1");
 	_device4 = _workcell4->findDevice("UR1");
 
+	_deviceAstar = _workcellAstar->findDevice("UR1");
+
 	_state1 =  _workcell1->getDefaultState();
 	_state2 =  _workcell1->getDefaultState();
 	_state3 =  _workcell1->getDefaultState();
 	_state4 =  _workcell1->getDefaultState();
+	
+	_stateAstar = _workcellAstar->getDefaultState();
 
 
 	// Create Graph
@@ -519,6 +561,7 @@ void Roadmap::initRobworkStuff()
 	_strategy2 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	_strategy3 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	_strategy4 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
+	_strategyAstar = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	if(_strategy1 == NULL)
 		ROS_ERROR("Strategy error");
 
@@ -528,6 +571,7 @@ void Roadmap::initRobworkStuff()
 	_detector2 = new rw::proximity::CollisionDetector(_workcell2, _strategy1);
 	_detector3 = new rw::proximity::CollisionDetector(_workcell3, _strategy1);
 	_detector4 = new rw::proximity::CollisionDetector(_workcell4, _strategy1);
+	_detectorAstar = new rw::proximity::CollisionDetector(_workcellAstar, _strategyAstar);
 	if(_detector1 == NULL)
 		ROS_ERROR("Detector error");
 
@@ -536,6 +580,7 @@ void Roadmap::initRobworkStuff()
 	_constraint2 = rw::pathplanning::QConstraint::make(_detector2, _device2, _state2);
 	_constraint3 = rw::pathplanning::QConstraint::make(_detector3, _device3, _state3);
 	_constraint4 = rw::pathplanning::QConstraint::make(_detector4, _device4, _state4);
+	_constraintAstar = rw::pathplanning::QConstraint::make(_detectorAstar, _deviceAstar, _stateAstar);
 
 	// EdgeConstraint, to check for collision in an edge
 	_edgeConstraint1 = rw::pathplanning::QEdgeConstraint::make(
@@ -549,6 +594,9 @@ void Roadmap::initRobworkStuff()
 
 	_edgeConstraint4 = rw::pathplanning::QEdgeConstraint::make(
             _constraint4, rw::math::MetricFactory::makeEuclidean<rw::math::Q>(), _resolution);
+
+	_edgeConstraintAstar = rw::pathplanning::QEdgeConstraint::make(
+            _constraintAstar, rw::math::MetricFactory::makeEuclidean<rw::math::Q>(), _resolution);
 
 	// Make a uniform sampler, which only returns collision free samples for both bounds and workcell
 	// We might not want a constrained sampler, if we wants to use our own bounds, alternative we can change the robots bounds!

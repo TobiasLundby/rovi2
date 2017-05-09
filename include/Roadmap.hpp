@@ -204,8 +204,8 @@ public:
 	int t4Usage = 0;
 
 	boost::mutex push_lock;
-	boost::mutex astar_lock;
-	bool astar_running = false;
+	//boost::mutex astar_lock;
+	//bool astar_running = false;
 	Astar *planner;
 	boost::thread* astar_thread = nullptr;
 	std::vector<boost::thread*> threads;

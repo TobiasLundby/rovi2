@@ -39,7 +39,7 @@
  </Frame>
 
  <Frame name="BallError" refframe="TCPMarker">
- <RPY> 0 0 0 </RPY> <Pos> 0 -0.134 0 </Pos>
+ <RPY> 0 0 0 </RPY> <Pos> 0 -0.154 0 </Pos>
  </Frame>
  
 

@@ -23,7 +23,7 @@ Astar::Astar(double size, std::vector<Node*> *graph, 	rw::math::QMetric::Ptr met
 	_edgeConstraint(edgeConstraint)
 {
 
-	_openList = NULL;
+	_openList = nullptr;
 	_numRun = 0;
 
 }
@@ -32,7 +32,7 @@ Astar::Astar(double size, std::vector<Node*> *graph, 	rw::math::QMetric::Ptr met
 
 Astar::~Astar()
 {
-	if(!_openList == NULL)
+	if(!(_openList == nullptr))
 		delete _openList;
 
 }
@@ -46,18 +46,25 @@ double Astar::calc_h(int cId, int gId)
 
 void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 {
+	std::stringstream buffer;
+	buffer << "startNodeId: " << startNodeId << " goalNodeId: " << goalNodeId << std::endl;
+	ROS_INFO("%s", buffer.str().c_str());
+
+
+	ROS_INFO("Im here 8");
 	_numRun++;
-	if(_openList == NULL)
+	if(_openList == nullptr)
 			_openList = new std::priority_queue<Node*, std::vector<Node*>, sort_func>;
 
 
 	// Init start Node (Root)
 	_graph->at(startNodeId)->g_score = 0;
-	_graph->at(startNodeId)->f_score = calc_h(startNodeId, goalNodeId);
+	_graph->at(startNodeId)->f_score = 1;//calc_h(startNodeId, goalNodeId);
 	_graph->at(startNodeId)->astar_run = _numRun;
 	_graph->at(startNodeId)->closed = false;
 	_graph->at(startNodeId)->open = true;
-
+	
+	_openList->push(_graph->at(startNodeId));
 	while(!_openList->empty())
 	{
 		Node* current = _openList->top();
@@ -67,7 +74,7 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 			ROS_INFO("Found path");
 
 			delete _openList;
-			_openList = NULL;
+			_openList = nullptr;
 
 			return;
 
@@ -90,8 +97,7 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 			if(current->edges.at(i)->closed == false)	
 			{
 				double _g_score = current->g_score + current->edge_cost.at(i);
-				double _f_score = current->edges.at(i)->g_score + calc_h(current->edges.at(i)->nodenum, goalNodeId);
-
+				double _f_score = current->edges.at(i)->g_score + 1; //calc_h(current->edges.at(i)->nodenum, goalNodeId);
 				if(current->edges.at(i)->open == false)
 				{	
 					current->edges.at(i)->open = true;
@@ -112,5 +118,5 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 	ROS_INFO("No path found!");
 
 	delete _openList;
-	_openList = NULL;
+	_openList = nullptr;
 }

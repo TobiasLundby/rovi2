@@ -13,6 +13,9 @@
 #include <rw/proximity/CollisionDetector.hpp>
 #include <rw/proximity/CollisionStrategy.hpp>
 #include <rw/common.hpp>
+#include "ros/ros.h"
+#include <sstream>
+#include <string>
 
 
 
@@ -40,7 +43,7 @@ private:
 	rw::math::QMetric::Ptr _metric;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint;
-   	std::priority_queue<Node*, std::vector<Node*>, sort_func> *_openList;
+   	std::priority_queue<Node*, std::vector<Node*>, sort_func> *_openList = nullptr;
 	double calc_h(int cId, int gId);
 
 
