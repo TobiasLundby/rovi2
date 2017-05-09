@@ -29,6 +29,7 @@
 #define SHOW_INPUT_STREAM true
 #define OUTPUT_TRIANGULATED_POINT false
 #define OUTPUT_RECT_AND_UNDIST_POINT false
+#define CAM_FREQ 10
 
 std::vector<float> calculate_3D_point(double left_x, double left_y, double right_x, double right_y)
 {
@@ -332,7 +333,7 @@ int main(int argc, char** argv)
     detector_right.set_result_window_name("Right result 2D");
 
     // Kalman filter
-    float delta_t = 1/15;
+    float delta_t = 1/CAM_FREQ;
     cv::KalmanFilter KF(9, 3, 0);
 
     // intialization of KF...
