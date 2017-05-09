@@ -28,6 +28,7 @@ public:
   ColorDetector();
   std::vector<Point2f> FindMarker(Mat &image);
   void set_result_window_name(std::string name);
+  std::vector<double> estimate_variance(Mat &image);
 private:
     std::string window_name = "Result 2D";
 

@@ -105,6 +105,11 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
   return output_points;
 }
 
+std::vector<double> estimate_variance(Mat &image)
+{
+  
+}
+
 void ColorDetector::set_result_window_name(std::string name)
 {
     window_name = name;
