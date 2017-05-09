@@ -143,6 +143,28 @@ if (SHOULD_BUILD)
   add_library(StudioPlugin MODULE ${StudioPlugin_src} ${UIS_OUT_H} ${MocSrcFiles} ${RccSrcFiles})
   target_link_libraries(StudioPlugin ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
 
+  include_directories(vision_test
+    include
+    ${ROBWORK_INCLUDE_DIR}
+    ${ROBWORKHARDWARE_INCLUDE_DIRS}
+    ${ROBWORKSTUDIO_INCLUDE_DIRS}
+    ${catkin_INCLUDE_DIRS}
+    )
+  add_executable(vision_test src/vision_test_node.cpp src/vision_test.cpp)
+  target_link_libraries(vision_test
+    ${catkin_LIBRARIES}
+    ${ROBWORK_LIBRARIES}
+    ${ROBWORKHARDWARE_LIBRARIES}
+    ${ROBWORKSTUDIO_LIBRARY_DIRS}
+    ${catkin_LIBRARIES}
+    )
+  add_dependencies(vision_test std_msgs rovi2_generate_messages_cpp)
+
+
+
+
+
+
 catkin_package()
 
   ########################################################################
