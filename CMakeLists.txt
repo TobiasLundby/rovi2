@@ -53,6 +53,7 @@ if (SHOULD_BUILD)
     FILES
     MovePtp.srv
     Plan.srv
+    Movexyz.srv
     )
 
 	add_message_files(
@@ -61,6 +62,7 @@ if (SHOULD_BUILD)
 	  State.msg
     position2D.msg
     position3D.msg
+	xyz.msg
 	)
 
   generate_messages(

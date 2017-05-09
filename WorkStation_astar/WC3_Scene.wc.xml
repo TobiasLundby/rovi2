@@ -1,0 +1,27 @@
+<WorkCell name="SceneUR">
+
+
+ <Frame name="Robot" refframe="WORLD">
+    <RPY> -90 0 0 </RPY> <Pos>0 0.0 0.811</Pos>
+ </Frame>
+ <Include file="UR/UR.wc.xml" />
+
+  <Frame name="WSG50" refframe="UR1.TCP">
+    <RPY> 176.6 0 -90 </RPY> <Pos> -0.012 0 0.01 </Pos>
+  </Frame>
+  <Include file="WSG50/WSG50.wc.xml"/>
+
+
+
+  <Frame name="Ball" refframe="Robot" type="Movable">
+    <RPY> 0 0 0 </RPY> <Pos> 0 -1.5 1 </Pos>
+    <Drawable name="BallGeo" refframe="Ball">
+     <RPY> 0 0 0 </RPY> <Pos> 0 0 0 </Pos>
+     <Polytope file="Geometry/Red_ball" />
+    </Drawable>
+   </Frame> 
+
+
+<CollisionSetup file="CollisionSetup.xml"/>
+
+</WorkCell>

@@ -4,6 +4,7 @@
 
 
 
+
 RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 {
 
@@ -12,6 +13,7 @@ RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 	RobotNode_ros::initWorkCell();
 	RobotNode_ros::initDevice();
 	service_nonlinear = _nodehandle.advertiseService("rovi2/robot_node/Move_nonlinear_ptp", &RobotNode_ros::Move_nonlinear_ptp, this);
+	service_inverse = _nodehandle.advertiseService("rovi2/robot_node/MoveXYZ", &RobotNode_ros::Move_xyz, this);
         state_updater = _nodehandle.advertise<rovi2::State>("rovi2/robot_node/Robot_state", 1);
 };
 
@@ -57,6 +59,10 @@ void RobotNode_ros::initWorkCell()
 	_device = _workcell->findDevice("UR1");
 
 	_state =  _workcell->getDefaultState();
+
+	_BallErrorFrame = _workcell->findFrame("WSG50.BallError");
+
+	_solver = new rw::invkin::JacobianIKSolver(_device, _BallErrorFrame, _state);
 
 
 };
@@ -156,3 +162,28 @@ bool RobotNode_ros::Move_nonlinear_ptp(rovi2::MovePtp::Request & request, rovi2:
 	return true;
 	
 }
+
+bool RobotNode_ros::Move_xyz(rovi2::Movexyz::Request &request, rovi2::Movexyz::Response &res)
+{
+	rw::math::Transform3D<double> newT(rw::math::Vector3D<double>(request.target.data[0], request.target.data[1], request.target.data[2]), rw::math::RPY<double>(request.target.data[3], request.target.data[4], request.target.data[5]).toRotation3D()); 
+	std::vector<rw::math::Q> qVec = _solver->solve(newT, _state);
+	res.success = false;
+	
+	if(qVec.size() != 0 and qVec[0].size() >1)
+	{
+		_ur->moveQ(qVec[0], 1.0);
+		_device->setQ(qVec[0], _state);
+		res.success = true;
+		
+	}
+
+
+
+}
+
+
+
+
+
+
+

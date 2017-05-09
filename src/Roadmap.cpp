@@ -14,10 +14,10 @@
 #include <sstream>
 #include <boost/algorithm/string.hpp>
 #include <stdlib.h>
-#include "Astar.hpp"
 #include <time.h>
 #include <stdio.h>
 #include <iomanip>
+#include "Astar.hpp"
 
 
 
@@ -63,6 +63,7 @@ Roadmap::Roadmap(ros::NodeHandle h, std::string path)
 	buffer << "ConnectedNodes: " << _actualSize - non << " , nonConnectedNodes: " << non << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
+	//planner = new Astar(_size, _graph, 	rw::math::QMetric::Ptr metric, rw::common::Ptr<rw::pathplanning::QConstraint> constraint, 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> edgeConstraint);
 	service_start_plan = _nodehandle.advertiseService("rovi2/Roadmap/StartPlan", &Roadmap::start_plan, this);
 	
 
@@ -89,11 +90,17 @@ rw::math::Q Roadmap::toRw(const rovi2::Q& q)
 
 bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res)
 {
+	/*if(astar_thread == nullptr)
+		astar_thread = new boost::thread(boost::bind(&Roadmap::threadAdd1, this, a, addAble[i]));
+	boost::mutex::scoped_lock lock(astar_lock);
+	if(!astar_running)
+	
+	boost::mutex::scoped_lock unlock(astar_lock);
 	rw::math::Q init = Roadmap::toRw(request.init);
 	rw::math::Q goal = Roadmap::toRw(request.goal);
 
 	res.success = true;
-
+	*/
 	return true;
 
 }
@@ -476,6 +483,9 @@ void Roadmap::initWorkCell()
 	_workcell2 = rw::loaders::WorkCellLoader::Factory::load(path);
 	_workcell3 = rw::loaders::WorkCellLoader::Factory::load(path);
 	_workcell4 = rw::loaders::WorkCellLoader::Factory::load(path);
+
+	std::string path2 = ros::package::getPath("rovi2") + "/WorkStation_astar/WC3_Scene.wc.xml";
+	_workcellAstar = rw::loaders::WorkCellLoader::Factory::load(path2);
 
 	_device1 = _workcell1->findDevice("UR1");
 	_device2 = _workcell2->findDevice("UR1");
