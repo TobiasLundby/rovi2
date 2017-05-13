@@ -6,6 +6,8 @@
 #include "Roadmap.hpp"
 #include <limits>
 
+#define NO_COLLISION_CHECK true
+
 
 struct sort_func {
     bool operator()(Node* a, Node* b)
@@ -44,7 +46,7 @@ double Astar::calc_h(int cId, int gId)
 }
 
 
-void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
+void Astar::find_path(int startNodeId, int goalNodeId, rovi2::path &path)
 {
 	std::stringstream buffer;
 	buffer << "startNodeId: " << startNodeId << " goalNodeId: " << goalNodeId << std::endl;
@@ -59,7 +61,7 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 
 	// Init start Node (Root)
 	_graph->at(startNodeId)->g_score = 0;
-	_graph->at(startNodeId)->f_score = 1;//calc_h(startNodeId, goalNodeId);
+	_graph->at(startNodeId)->f_score = calc_h(startNodeId, goalNodeId);
 	_graph->at(startNodeId)->astar_run = _numRun;
 	_graph->at(startNodeId)->closed = false;
 	_graph->at(startNodeId)->open = true;
@@ -69,49 +71,67 @@ void Astar::find_path(int startNodeId, int goalNodeId, std::vector<int> &path)
 	{
 		Node* current = _openList->top();
 		_openList->pop();
-		if(current->nodenum == goalNodeId)
+		if(NO_COLLISION_CHECK )//|| !_constraint->inCollision(current->q_val))
 		{
-			ROS_INFO("Found path");
+			if(current->nodenum == goalNodeId)
+			{
+				ROS_INFO("Found path");
+				while(current->cameFrom->nodenum != startNodeId)
+				{	
+					//ROS_INFO("Test");
+					path.data.push_back(current->nodenum);
+					current = current->cameFrom;
 
-			delete _openList;
-			_openList = nullptr;
+				}
 
-			return;
 
-		}
-		current->open = false;
-		current->closed = true;
+				delete _openList;
+				_openList = nullptr;
+
+				return;
+
+			}
+			current->open = false;
+			current->closed = true;
 		
 
-		for(int i = 0; i< current->edges.size(); i++)
-		{
-			if(current->edges.at(i)->astar_run != _numRun)
+			for(int i = 0; i< current->edges.size(); i++)
 			{
-				current->edges.at(i)->astar_run = _numRun;
-				current->edges.at(i)->closed = false;
-				current->edges.at(i)->open = false;
-				current->edges.at(i)->g_score = std::numeric_limits<double>::max();
-				current->edges.at(i)->f_score = std::numeric_limits<double>::max();
-			}
-
-			if(current->edges.at(i)->closed == false)	
-			{
-				double _g_score = current->g_score + current->edge_cost.at(i);
-				double _f_score = current->edges.at(i)->g_score + 1; //calc_h(current->edges.at(i)->nodenum, goalNodeId);
-				if(current->edges.at(i)->open == false)
-				{	
-					current->edges.at(i)->open = true;
-					_openList->push(current->edges.at(i));
-
-				}
-				
-				if(current->edges.at(i)->f_score > _f_score)
+				if(current->edges.at(i)->astar_run != _numRun)
 				{
-					current->edges.at(i)->cameFrom = current;
-					current->edges.at(i)->g_score = _g_score;		
-					current->edges.at(i)->f_score = _f_score;
+					current->edges.at(i)->astar_run = _numRun;
+					current->edges.at(i)->closed = false;
+					current->edges.at(i)->open = false;
+					current->edges.at(i)->g_score = std::numeric_limits<double>::max();
+					current->edges.at(i)->f_score = std::numeric_limits<double>::max();
+				}
+
+				if(current->edges.at(i)->closed == false)	
+				{
+					double _g_score = current->g_score + current->edge_cost.at(i);
+					double _f_score = current->edges.at(i)->g_score + calc_h(current->edges.at(i)->nodenum, goalNodeId);
+					if(current->edges.at(i)->open == false)
+					{	
+						current->edges.at(i)->open = true;
+						_openList->push(current->edges.at(i));
+						current->edges.at(i)->cameFrom = current;
+
+					}
+				
+					if(current->edges.at(i)->f_score > _f_score)
+					{
+						current->edges.at(i)->cameFrom = current;
+						current->edges.at(i)->g_score = _g_score;		
+						current->edges.at(i)->f_score = _f_score;
+					}
 				}
 			}
+		}
+		else
+		{
+			current->open = false;
+			current->closed = true;
+
 		}
 	}
 	
