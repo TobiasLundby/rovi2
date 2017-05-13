@@ -10,9 +10,11 @@
 #include <sensor_msgs/image_encodings.h>
 
 // OPENCV
+//#include <opencv2/core/core.hpp>
 #include "opencv2/opencv.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+//#include "opencv2/video/tracking.hpp"
 #include <string>
 
 // Subsriber syncrhonizer
@@ -35,6 +37,10 @@ rovi2::position2D msg_undist_left;
 rovi2::position2D msg_undist_right;
 ros::Publisher position_pub_left;
 ros::Publisher position_pub_right;
+
+rovi2::position3D msg_velocity;
+ros::Publisher position_velocity;
+int image_number = 0;
 
 std::vector<float> calculate_3D_error()
 /* Input:   */
@@ -242,6 +248,7 @@ void callback(
     if(position_right.size() > 0 and position_left.size() > 0 ) {
         std::vector<float> triangluated_point;
         triangluated_point = calculate_3D_point((double)position_left.at(0).x, (double)position_left.at(0).y, (double)position_right.at(0).x, (double)position_right.at(0).y);
+
         if(triangluated_point.size() > 0)
         {
             msg.x = (float)triangluated_point.at(0);
@@ -255,17 +262,58 @@ void callback(
             measurement(2) = (float)triangluated_point.at(2);
 
             Mat estimated = KF_ptr.correct(measurement);
+
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(0));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(1));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(2));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(3));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(4));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(5));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(6));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(7));
+            // ROS_ERROR("Vel is %f \n", estimated.at<float>(8));
+
+
             msg.x = estimated.at<float>(0);
             msg.y = estimated.at<float>(1);
             msg.z = estimated.at<float>(2);
             kalman_pub_estimate_ptr.publish(msg); // Publish it
+
+            if(false)// && (image_number % 15) == 0)
+            {
+                std::string calib_path = "/home/tobiaslundby/Desktop/image_log";
+                std::ostringstream name_left;
+                name_left << calib_path << "/image_left/" << std::to_string(image_number) << ".jpg";
+                std::ostringstream name_right;
+                name_right << calib_path << "/image_right/" << std::to_string(image_number) << ".jpg";
+                cv::imwrite(name_left.str(),cv_left_ptr->image);
+                cv::imwrite(name_right.str(),cv_right_ptr->image);
+            }
+            image_number++;
+
+            msg_velocity.x = estimated.at<float>(3);
+            msg_velocity.y = estimated.at<float>(4);
+            msg_velocity.z = estimated.at<float>(5);
+
+            position_velocity.publish(msg_velocity); // Publish it
         }
+
+        Mat prediction = KF_ptr.predict();
+        msg.x = prediction.at<float>(0);
+        msg.y = prediction.at<float>(1);
+        msg.z = prediction.at<float>(2);
+        kalman_pub_prediction_ptr.publish(msg); // Publish it
+        //
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(0));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(1));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(2));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(3));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(4));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(5));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(6));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(7));
+        // ROS_ERROR("Pred Vel is %f \n", prediction.at<float>(8));
     }
-    Mat prediction = KF_ptr.predict();
-    msg.x = prediction.at<float>(0);
-    msg.y = prediction.at<float>(1);
-    msg.z = prediction.at<float>(2);
-    kalman_pub_prediction_ptr.publish(msg); // Publish it
 }
 
 int main(int argc, char** argv)
@@ -337,8 +385,8 @@ int main(int argc, char** argv)
     detector_right.set_result_window_name("Right result 2D");
 
     // Kalman filter
-    float delta_t = 1/CAM_FREQ;
-    cv::KalmanFilter KF(9, 3, 0);
+    float delta_t = 1.0/CAM_FREQ;
+    KalmanFilter KF(9, 3, 0);
 
     // intialization of KF...
     KF.transitionMatrix = (Mat_<float>(9, 9) <<
@@ -381,6 +429,35 @@ int main(int argc, char** argv)
     std::string output_topic_position_right = ros::this_node::getName() + "/pos_right";
     position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
     position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
+
+    std::string output_topic_velocity = ros::this_node::getName() + "/velocity";
+    position_velocity = nh_.advertise<rovi2::position3D>(output_topic_velocity,1);
+
+    // cv::Mat_<float> measurement(3,1);
+    // measurement.setTo(Scalar(0));
+    // while(true)
+    // {
+    //     // Step 1. - Update the internal statePre variable
+    //     Mat prediction = KF.predict();
+    //
+    //     measurement(0) = measurement(0)+1.0;
+    //     measurement(1) = measurement(1)+1.0;
+    //     measurement(2) = measurement(2)+2.0;
+    //     // Step 2. - The update phase
+    //     Mat estimated = KF.correct(measurement);
+    //
+    //     ROS_ERROR("Pos x: %f \n", estimated.at<float>(0));
+    //     ROS_ERROR("Pos y: %f \n", estimated.at<float>(1));
+    //     ROS_ERROR("Pos z: %f \n", estimated.at<float>(2));
+    //     ROS_ERROR("Vel x: %f \n", estimated.at<float>(3));
+    //     ROS_ERROR("Vel y: %f \n", estimated.at<float>(4));
+    //     ROS_ERROR("Vel z: %f \n", estimated.at<float>(5));
+    //     ROS_ERROR("Acc x: %f \n", estimated.at<float>(6));
+    //     ROS_ERROR("Acc y: %f \n", estimated.at<float>(7));
+    //     ROS_ERROR("Acc z: %f \n", estimated.at<float>(8));
+    //
+    //     ros::Duration(0.5).sleep(); // sleep for half a second
+    // }
 
     sync.registerCallback(boost::bind(&callback, _1, _2,
         /*image_pub_left, image_pub_right,*/
