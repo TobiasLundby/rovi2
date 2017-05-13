@@ -54,7 +54,7 @@ void robotState_callback(const rovi2::State& msg)
 //
 void save_callback (const std_msgs::Bool &msg)
 {
-  image_number++;
+  //image_number++;
   std::ofstream ofs("/home/mathias/Desktop/calib/robotState.txt", std::ofstream::app);
   //ofs << "test" << std::endl;
   ROS_ERROR("robotState_vec size when saved: %i", robotState_vec.size());
@@ -194,9 +194,10 @@ void callback(
     }
 
     // Save for eye to hand calibration
-    if(true)
+    if(true)// && (image_number % 15) == 0)
     {
-        std::string calib_path = "/home/mathias/Desktop/calib";
+
+        std::string calib_path = "/home/mathias/Desktop/image_log";
         std::ostringstream name_left;
         name_left << calib_path << "/image_left/" << std::to_string(image_number) << ".jpg";
         std::ostringstream name_right;
@@ -204,6 +205,8 @@ void callback(
         cv::imwrite(name_left.str(),cv_left_ptr->image);
         cv::imwrite(name_right.str(),cv_right_ptr->image);
     }
+    image_number++;
+
 }
 
 int main(int argc, char** argv)

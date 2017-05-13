@@ -120,6 +120,12 @@ if (SHOULD_BUILD)
   target_link_libraries(ball_locator_3d ${catkin_LIBRARIES} )
   add_dependencies(ball_locator_3d sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
 
+  add_executable(ball_locator_3d_eye_hand_logging src/ball_locator_3d_eye_hand_logging.cpp src/ColorDetector.cpp)
+  #target_link_libraries(ball_locator_3d_eye_hand_logging ${catkin_LIBRARIES} ${OpenCV_LIBS} )
+  target_link_libraries(ball_locator_3d_eye_hand_logging ${catkin_LIBRARIES} )
+  add_dependencies(ball_locator_3d_eye_hand_logging sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
+
+
   #add_executable(camera3D src/camera3D.cpp src/Stereopsis.cpp)
   #target_link_libraries(camera3D ${catkin_LIBRARIES} ${OpenCV_LIBS))
   #add_dependencies(camera3D std_msgs rovi2_generate_messages_cpp)
