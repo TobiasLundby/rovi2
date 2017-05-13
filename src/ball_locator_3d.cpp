@@ -31,6 +31,18 @@
 #define OUTPUT_RECT_AND_UNDIST_POINT false
 #define CAM_FREQ 10
 
+rovi2::position2D msg_undist_left;
+rovi2::position2D msg_undist_right;
+ros::Publisher position_pub_left;
+ros::Publisher position_pub_right;
+
+std::vector<float> calculate_3D_error()
+/* Input:   */
+/* Output: a vector of the error in the u (x) and v (y) directions */
+{
+
+}
+
 std::vector<float> calculate_3D_point(double left_x, double left_y, double right_x, double right_y)
 {
     Mat left_point(1, 1, CV_64FC2);
@@ -40,22 +52,6 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     left_point.at<Vec2d>(0)[1] = left_y;
     right_point.at<Vec2d>(0)[0] = right_x;
     right_point.at<Vec2d>(0)[1] = right_y;
-
-    /* OLD CALIB, not enough dist coeffs */
-    // Mat proj_l_ros = Mat::zeros(3,4,CV_64F);
-    // proj_l_ros.at<double>(0,0) = 1337.227804;
-    // proj_l_ros.at<double>(0,2) = 533.141155;
-    // proj_l_ros.at<double>(1,1) =  1337.227804;
-    // proj_l_ros.at<double>(1,2) = 467.337757;
-    // proj_l_ros.at<double>(2,2) = 1.0;
-    //
-    // Mat proj_r_ros = Mat::zeros(3,4,CV_64F);
-    // proj_r_ros.at<double>(0,0) = 1337.227804;
-    // proj_r_ros.at<double>(0,2) = 533.141155;
-    // proj_r_ros.at<double>(0,3) = -158.387082;
-    // proj_r_ros.at<double>(1,1) =  1337.227804;
-    // proj_r_ros.at<double>(1,2) = 467.337757;
-    // proj_r_ros.at<double>(2,2) = 1.0;
 
     /* LEFT CALIBRATION */
     double img_width_l = 1024;
@@ -143,6 +139,14 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
 
     undistortPoints(left_point, left_point_undistorted, camera_matrix_l, dist_coeffs_l, rectification_l, camera_matrix_l);
     undistortPoints(right_point, right_point_undistorted, camera_matrix_r, dist_coeffs_r, rectification_r, camera_matrix_r);
+
+
+    msg_undist_left.x = (float)left_point_undistorted.at<Vec2d>(0)[0];
+    msg_undist_left.y = (float)left_point_undistorted.at<Vec2d>(0)[1];
+    position_pub_left.publish(msg_undist_left); // Publish it
+    msg_undist_right.x = (float)right_point_undistorted.at<Vec2d>(0)[0];
+    msg_undist_right.y = (float)right_point_undistorted.at<Vec2d>(0)[1];
+    position_pub_right.publish(msg_undist_right); // Publish it
 
     if (OUTPUT_RECT_AND_UNDIST_POINT) {
         std::stringstream buffer_left;
@@ -309,21 +313,21 @@ int main(int argc, char** argv)
     // ApproximateTiros::Publisher position_pub_left;me takes a queue size as its constructor argument, hence MySyncPolicy(10)
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_left, image_right);
 
-    // Image conversion
-    std::string output_topic_cam_left = node_name + "/bb_cam_opencv_left";
-    std::string output_topic_cam_right = node_name + "/bb_cam_opencv_right";
-    ROS_INFO("Left  OpenCV image topic (output): %s", output_topic_cam_left.c_str());
-    ROS_INFO("Right OpenCV image topic (output): %s", output_topic_cam_right.c_str());
-    image_transport::ImageTransport it_(nh_);
-    image_transport::Publisher image_pub_left = it_.advertise(output_topic_cam_left, 1);
-    image_transport::Publisher image_pub_right = it_.advertise(output_topic_cam_right, 1);
+    // Image conversion - NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
+    // std::string output_topic_cam_left = node_name + "/bb_cam_opencv_left";
+    // std::string output_topic_cam_right = node_name + "/bb_cam_opencv_right";
+    // ROS_INFO("Left  OpenCV image topic (output): %s", output_topic_cam_left.c_str());
+    // ROS_INFO("Right OpenCV image topic (output): %s", output_topic_cam_right.c_str());
+    // image_transport::ImageTransport it_(nh_);
+    // image_transport::Publisher image_pub_left = it_.advertise(output_topic_cam_left, 1);
+    // image_transport::Publisher image_pub_right = it_.advertise(output_topic_cam_right, 1);
 
-    // Position publisher
-    std::string output_topic_position_left = node_name + "/pos_left";
-    std::string output_topic_position_right = node_name + "/pos_right";
+    // Position publisher - LEFT AND RIGHT POS NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
+    // std::string output_topic_position_left = node_name + "/pos_left";
+    // std::string output_topic_position_right = node_name + "/pos_right";
     std::string output_topic_position_triangulated = node_name + "/pos_triangulated";
-    ros::Publisher position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
-    ros::Publisher position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
+    // ros::Publisher position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
+    // ros::Publisher position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
     ros::Publisher position_pub_triangulated = nh_.advertise<rovi2::position3D>(output_topic_position_triangulated,1);
 
     // Ball detector objects; two have been made if different settings are required later
@@ -363,7 +367,7 @@ int main(int argc, char** argv)
     /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
     setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
     /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
-    setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement of pixel can deviate with 20
+    setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
     /* Initial error */
     setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
 
@@ -372,6 +376,11 @@ int main(int argc, char** argv)
     std::string kalman_prediction_str = node_name + "/kalman_prediction";
     ros::Publisher kalman_pub_estimate = nh_.advertise<rovi2::position3D>(kalman_estimate_str,1);
     ros::Publisher kalman_pub_prediction = nh_.advertise<rovi2::position3D>(kalman_prediction_str,1);
+
+    std::string output_topic_position_left = ros::this_node::getName() + "/pos_left";
+    std::string output_topic_position_right = ros::this_node::getName() + "/pos_right";
+    position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
+    position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
 
     sync.registerCallback(boost::bind(&callback, _1, _2,
         /*image_pub_left, image_pub_right,*/
