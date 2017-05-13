@@ -63,6 +63,7 @@ if (SHOULD_BUILD)
 	  State.msg
     position2D.msg
     position3D.msg
+    velocityXYZ.msg
 	xyz.msg
 	path.msg
 	)
