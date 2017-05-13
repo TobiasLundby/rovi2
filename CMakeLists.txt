@@ -54,6 +54,7 @@ if (SHOULD_BUILD)
     MovePtp.srv
     Plan.srv
     Movexyz.srv
+    Conf.srv
     )
 
 	add_message_files(
@@ -63,6 +64,7 @@ if (SHOULD_BUILD)
     position2D.msg
     position3D.msg
 	xyz.msg
+	path.msg
 	)
 
   generate_messages(
@@ -165,6 +167,10 @@ if (SHOULD_BUILD)
   add_executable(vision_test_move_robot src/vision_test_move_robot.cpp)
   target_link_libraries(vision_test_move_robot ${catkin_LIBRARIES} )
   add_dependencies(vision_test_move_robot std_msgs rovi2_generate_messages_cpp)
+
+  add_executable(Application src/Application.cpp)
+  target_link_libraries(Application ${ROBWORK_LIBRARIES} ${catkin_LIBRARIES} )
+  add_dependencies(Application std_msgs rovi2_generate_messages_cpp)
 
 
 

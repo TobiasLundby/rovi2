@@ -108,7 +108,7 @@ rw::math::Q RobotNode_ros::getQ()
 
 void RobotNode_ros::StatePublisher()
 {
-	ros::Rate loop_rate(100);
+	ros::Rate loop_rate(10);
 
 	while(ros::ok())
 	{
@@ -131,7 +131,7 @@ void RobotNode_ros::StatePublisher()
 			bool is_moving = false;
 			for(int i = 0; i< 6; i++)
 			{
-				if(fabs(urrt_data.dqActual[i]) > 0.0001)
+				if(fabs(urrt_data.dqActual[i]) > 0.001)
 				{
 					is_moving = true;
 					break;

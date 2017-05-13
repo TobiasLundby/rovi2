@@ -9,6 +9,8 @@
 #include <rw/math/Q.hpp>
 #include "rovi2/Q.h"
 #include "rovi2/Plan.h"
+#include "rovi2/path.h"
+#include "rovi2/Conf.h"
 //#include <rw/math/QMetric.hpp>
 #include <rwlibs/proximitystrategies/ProximityStrategyPQP.hpp>
 #include <rw/pathplanning/PlannerConstraint.hpp>
@@ -37,8 +39,7 @@ class Node
 {
 public:
  	Node(rw::math::Q p, int nodeid){ q_val = p; edges = std::vector<Node*>(0); edge_cost = std::vector<double>(0); nodenum = nodeid;}
-	~Node();
-	 
+	~Node(){}	 
 
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
@@ -72,6 +73,7 @@ public:
 
 
 	rw::math::Q toRw(const rovi2::Q& q);
+	rovi2::Q toRos(const rw::math::Q& q);
 
 
 	
@@ -88,6 +90,7 @@ public:
 
 
 	bool start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res);
+	bool check_plan(rovi2::Conf::Request & request, rovi2::Conf::Response &res);
 	 
  
 
@@ -205,11 +208,13 @@ public:
 	boost::mutex push_lock;
 	//boost::mutex astar_lock;
 	//bool astar_running = false;
-	Astar *planner;
+	Astar *planner = nullptr;
 	boost::thread* astar_thread = nullptr;
 	std::vector<boost::thread*> threads;
 
 	ros::ServiceServer service_start_plan;
+	ros::ServiceServer service_next_conf;
+	ros::Publisher path_publisher;
 	ros::NodeHandle _nodehandle;
 	
 
