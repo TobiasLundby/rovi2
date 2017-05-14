@@ -44,11 +44,173 @@ rovi2::velocityXYZ msg_velocity;
 ros::Publisher position_velocity;
 int image_number = 0;
 
-std::vector<float> calculate_3D_error()
-/* Input:   */
-/* Output: a vector of the error in the u (x) and v (y) directions */
+cv::Mat propagate_error_2D_to_3D(cv::Mat E_m, cv::Point2f point_2D_left, cv::Point2f point_2D_right)
 {
+  /* How to index using Rect_
+  cv::Rect_<double>(start col, start row,width,height));
+  */
+  bool debug_propagate = false;
 
+  /* Left camera */
+  cv::Mat proj_l_ros = cv::Mat::zeros(3,4,CV_64F);
+  proj_l_ros.at<double>(0,0) = 1333.329856;
+  proj_l_ros.at<double>(0,2) = 537.019508;
+  proj_l_ros.at<double>(1,1) =  1333.329856;
+  proj_l_ros.at<double>(1,2) = 375.7627379;
+  proj_l_ros.at<double>(2,2) = 1.0;
+
+  /* Right camera */
+  cv::Mat proj_r_ros = cv::Mat::zeros(3,4,CV_64F);
+  proj_r_ros.at<double>(0,0) = 1333.329856;
+  proj_r_ros.at<double>(0,2) = 537.019508;
+  proj_r_ros.at<double>(0,3) = -159.033917;
+  proj_r_ros.at<double>(1,1) =  1333.329856;
+  proj_r_ros.at<double>(1,2) = 375.762737;
+  proj_r_ros.at<double>(2,2) = 1.0;
+
+  /* Subparts of the left projection matrix */
+  cv::Mat Q_l_1 = cv::Mat::zeros(1,3,CV_64F);
+  cv::Mat Q_l_2 = cv::Mat::zeros(1,3,CV_64F);
+  cv::Mat Q_l_3 = cv::Mat::zeros(1,3,CV_64F);
+
+  proj_l_ros(cv::Rect_<double>(0,0,3,1)).copyTo(Q_l_1);
+  //cv::transpose(Q_l_1,Q_l_1);
+  proj_l_ros(cv::Rect_<double>(0,1,3,1)).copyTo(Q_l_2);
+  //cv::transpose(Q_l_2,Q_l_2);
+  proj_l_ros(cv::Rect_<double>(0,2,3,1)).copyTo(Q_l_3);
+  //cv::transpose(Q_l_3,Q_l_3);
+
+  double q_l_1_4 = proj_l_ros.at<double>(0,3);
+  double q_l_2_4 = proj_l_ros.at<double>(1,3);
+  double q_l_3_4 = proj_l_ros.at<double>(2,3);
+
+  /* Subparts of the right projection matrix */
+  cv::Mat Q_r_1 = cv::Mat::zeros(1,3,CV_64F);
+  cv::Mat Q_r_2 = cv::Mat::zeros(1,3,CV_64F);
+  cv::Mat Q_r_3 = cv::Mat::zeros(1,3,CV_64F);
+
+  proj_r_ros(cv::Rect_<double>(0,0,3,1)).copyTo(Q_r_1);
+  //cv::transpose(Q_r_1,Q_r_1);
+  proj_r_ros(cv::Rect_<double>(0,1,3,1)).copyTo(Q_r_2);
+  //cv::transpose(Q_r_2,Q_r_2);
+  proj_r_ros(cv::Rect_<double>(0,2,3,1)).copyTo(Q_r_3);
+  //cv::transpose(Q_r_3,Q_r_3);
+
+  double q_r_1_4 = proj_r_ros.at<double>(0,3);
+  double q_r_2_4 = proj_r_ros.at<double>(1,3);
+  double q_r_3_4 = proj_r_ros.at<double>(2,3);
+
+  /************** INPUT PARAMETERS ************************************/
+  /* Diagonals matrices of 2D variance-covariance matrices */
+  // Diagonal gives only variance
+  //cv::Mat E_m = cv::Mat::zeros(4,4,CV_64F);
+  // E_m.at<double>(0,0) = 1.0e-10;
+  // E_m.at<double>(1,1) = 1.0e-10;
+  // E_m.at<double>(2,2) = 1.0e-10;
+  // E_m.at<double>(3,3) = 1.0e-10;
+
+  /* 2D points */
+  //double u_l = 1;
+  //double v_l = 1;
+  //double u_r = 1;
+  //double v_r = 1;
+  double u_l = (double)point_2D_left.x;
+  double v_l = (double)point_2D_left.y;
+  double u_r = (double)point_2D_right.x;
+  double v_r = (double)point_2D_right.y;
+
+
+
+
+  /*******************************************************************/
+
+  int num_2D_points = 2;
+
+
+  /* Left partial derivatives */
+  cv::Mat dA_l_du_l = cv::Mat::zeros(4,3,CV_64F);
+  cv::Mat dA_l_dv_l = cv::Mat::zeros(4,3,CV_64F);
+  cv::Mat db_l_du_l = cv::Mat::zeros(4,1,CV_64F);
+  cv::Mat db_l_dv_l = cv::Mat::zeros(4,1,CV_64F);
+
+  Q_l_3 = - Q_l_3;
+  Q_l_3.copyTo(dA_l_du_l(cv::Rect_<double>(0,0,3,1)));
+  Q_l_3.copyTo(dA_l_dv_l(cv::Rect_<double>(0,3,3,1)));
+  Q_l_3 = - Q_l_3;
+  db_l_du_l.at<double>(0,0) = q_l_3_4;
+  db_l_dv_l.at<double>(0,3) = q_l_3_4;
+
+  /* Right partial derivatives */
+  cv::Mat dA_r_du_r = cv::Mat::zeros(4,3,CV_64F);
+  cv::Mat dA_r_dv_r = cv::Mat::zeros(4,3,CV_64F);
+  cv::Mat db_r_du_r = cv::Mat::zeros(4,1,CV_64F);
+  cv::Mat db_r_dv_r = cv::Mat::zeros(4,1,CV_64F);
+
+  Q_r_3 = - Q_r_3;
+  Q_r_3.copyTo(dA_r_du_r(cv::Rect_<double>(0,0,3,1)));
+  Q_r_3.copyTo(dA_r_dv_r(cv::Rect_<double>(0,3,3,1)));
+  Q_r_3 = - Q_r_3;
+  db_r_du_r.at<double>(0,0) = q_r_3_4;
+  db_r_dv_r.at<double>(0,3) = q_r_3_4;
+
+  /* A and b matrices */
+  cv::Mat temp = cv::Mat::zeros(3,1,CV_64F);
+  cv::Mat A = cv::Mat::zeros(2*2,3,CV_64F);
+  temp = Q_l_1 - u_l*Q_l_3;
+  temp.copyTo(A(cv::Rect_<double>(0,0,3,1)));
+  temp = Q_l_1 - v_l*Q_l_3;
+  temp.copyTo(A(cv::Rect_<double>(0,1,3,1)));
+  temp = Q_r_1 - u_r*Q_r_3;
+  temp.copyTo(A(cv::Rect_<double>(0,2,3,1)));
+  temp = Q_r_1 - v_r*Q_r_3;
+  temp.copyTo(A(cv::Rect_<double>(0,3,3,1)));
+
+  cv::Mat b = cv::Mat::zeros(2*2,1,CV_64F);
+  b.at<double>(0,0) = u_l*q_l_3_4 - q_l_1_4;
+  b.at<double>(0,1) = v_l*q_l_3_4 - q_l_2_4;
+  b.at<double>(0,2) = u_r*q_r_3_4 - q_r_1_4;
+  b.at<double>(0,3) = v_r*q_r_3_4 - q_r_2_4;
+
+  /* dM_left */
+  cv::Mat ATA_inv = (A.t()*A).inv(cv::DECOMP_SVD);
+  // du
+  cv::Mat ATA_inv_du_l = - ATA_inv * (dA_l_du_l.inv(cv::DECOMP_SVD)*A+A.t()*dA_l_du_l)*ATA_inv;
+  cv::Mat dM_l_du_l = ATA_inv_du_l*A.t()*b + ATA_inv*dA_l_du_l.t()*b + ATA_inv*A.t()*db_l_du_l;
+  // dv
+  cv::Mat ATA_inv_dv_l = - ATA_inv * (dA_l_dv_l.inv(cv::DECOMP_SVD)*A*A.t()*dA_l_dv_l)*ATA_inv;
+  cv::Mat dM_l_dv_l = ATA_inv_dv_l*A.t()*b + ATA_inv*dA_l_dv_l.t()*b + ATA_inv*A.t()*db_l_dv_l;
+  if(debug_propagate) std::cout << "dM_l_du_l:" << std::endl << dM_l_du_l << std::endl;
+  if(debug_propagate) std::cout << "dM_l_dv_l:" << std::endl << dM_l_dv_l << std::endl;
+  // Assembly to dM
+  cv::Mat dM_dm_l = cv::Mat::zeros(3,2,CV_64F);
+  dM_l_du_l.copyTo(dM_dm_l(cv::Rect_<double>(0,0,1,3)));
+  dM_l_dv_l.copyTo(dM_dm_l(cv::Rect_<double>(1,0,1,3)));
+
+  /* dM_right */
+  //du
+  cv::Mat ATA_inv_du_r = - ATA_inv * (dA_r_du_r.inv(cv::DECOMP_SVD)*A+A.t()*dA_r_du_r)*ATA_inv;
+  cv::Mat dM_r_du_r = ATA_inv_du_r*A.t()*b + ATA_inv*dA_r_du_r.t()*b + ATA_inv*A.t()*db_r_du_r;
+  // dv
+  cv::Mat ATA_inv_dv_r = - ATA_inv * (dA_r_dv_r.inv(cv::DECOMP_SVD)*A*A.t()*dA_r_dv_r)*ATA_inv;
+  cv::Mat dM_r_dv_r = ATA_inv_dv_r*A.t()*b + ATA_inv*dA_r_dv_r.t()*b + ATA_inv*A.t()*db_r_dv_r;
+  // Assembly to dM
+  cv::Mat dM_dm_r = cv::Mat::zeros(3,2,CV_64F);
+  dM_r_du_r.copyTo(dM_dm_r(cv::Rect_<double>(0,0,1,3)));
+  dM_r_dv_r.copyTo(dM_dm_r(cv::Rect_<double>(1,0,1,3)));
+
+  /* dM */
+  cv::Mat JM = cv::Mat::zeros(3,4,CV_64F);
+  dM_dm_l.copyTo(JM(cv::Rect_<double>(0,0,2,3)));
+  dM_dm_r.copyTo(JM(cv::Rect_<double>(2,0,2,3)));
+
+  if(debug_propagate) std::cout << "JM:" << std::endl << JM << std::endl;
+  if(debug_propagate) std::cout << "JM.t:" << std::endl << JM.t() << std::endl;
+
+  cv::Mat E_M = cv::Mat::zeros(3,3,CV_64F);
+  if(debug_propagate) std::cout << "E_M:" << std::endl << E_M << std::endl;
+  E_M = JM*E_m*JM.t();
+
+  return E_M;
 }
 
 std::vector<float> calculate_3D_point(double left_x, double left_y, double right_x, double right_y)
