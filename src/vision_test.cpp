@@ -7,7 +7,8 @@ vision_test::vision_test(ros::NodeHandle n)
   subscribe_triangulated = nh.subscribe("/ball_locator_3d/pos_triangulated",0,&vision_test::triangulated_callback,this);
   subscribe_estimated = nh.subscribe("/ball_locator_3d/kalman_estimate",0,&vision_test::estimated_callback,this);
   subscribe_predicted = nh.subscribe("/ball_locator_3d/kalman_prediction",0,&vision_test::predicted_callback,this);
-
+  subscribe_xy_left = nh.subscribe("/ball_locator_3d/pos_left",0,&vision_test::xy_left_callback,this);
+  subscribe_xy_right = nh.subscribe("/ball_locator_3d/pos_right",0,&vision_test::xy_right_callback,this);
 
   _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
   _device = _workcell->findDevice("UR1");
@@ -40,13 +41,23 @@ void vision_test::robot_status_callback(const rovi2::State &msg)
 void vision_test::triangulated_callback(const rovi2::position3D &msg)
 {
   triangulated_pos = msg;
-  //ROS_INFO("Got a position");
+  //ROS_INFO("Triangulated: %f\t%f\t%f", msg.x, msg.y msg.z);
 }
 
 void vision_test::estimated_callback(const rovi2::position3D &msg)
 {
   estimated_pos = msg;
   //ROS_INFO("Got an estimate");
+}
+
+void vision_test::xy_left_callback(const rovi2::position2D &msg)
+{
+  xy_left_position = msg;
+}
+
+void vision_test::xy_right_callback(const rovi2::position2D &msg)
+{
+  xy_right_position = msg;
 }
 
 void vision_test::predicted_callback(const rovi2::position3D &msg)
@@ -83,6 +94,10 @@ void vision_test::predicted_callback(const rovi2::position3D &msg)
   file << robot_p(0) << "\t";
   file << robot_p(1) << "\t";
   file << robot_p(2) << "\t";
+  file << xy_left_position.x << "\t";
+  file << xy_left_position.y << "\t";
+  file << xy_right_position.x << "\t";
+  file << xy_right_position.y << "\t";
   file << std::endl;
   file.close();
 

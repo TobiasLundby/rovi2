@@ -5,6 +5,7 @@
 #include "rovi2/State.h"
 #include "rovi2/position3D.h"
 #include "rovi2/Q.h"
+#include "rovi2/position2D.h"
 
 // Robwork
 #include <rw/rw.hpp>
@@ -40,17 +41,24 @@ private:
   ros::Subscriber subscribe_triangulated;
   ros::Subscriber subscribe_estimated;
   ros::Subscriber subscribe_predicted;
+  ros::Subscriber subscribe_xy_left;
+  ros::Subscriber subscribe_xy_right;
 
   // Subscriber callbacks
   void robot_status_callback(const rovi2::State &msg);
   void triangulated_callback(const rovi2::position3D &msg);
   void estimated_callback(const rovi2::position3D &msg);
   void predicted_callback(const rovi2::position3D &msg);
+  void xy_left_callback(const rovi2::position2D &msg);
+  void xy_right_callback(const rovi2::position2D &msg);
 
   // Attributes
   rovi2::State robot_state;
   rovi2::position3D estimated_pos;
   rovi2::position3D triangulated_pos;
+  rovi2::position2D xy_left_position;
+  rovi2::position2D xy_right_position;
+
 
   // Robwork stuff
   rw::models::WorkCell::Ptr _workcell;

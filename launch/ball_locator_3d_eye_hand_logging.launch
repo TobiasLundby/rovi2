@@ -1,0 +1,9 @@
+<launch>
+    <arg name="camera_sub_left" default="/camera/left/image_raw" />
+    <arg name="camera_sub_right" default="/camera/right/image_raw" />
+
+    <node pkg="rovi2" name="logging_node" type="ball_locator_3d_eye_hand_logging" >
+        <param name="camera_sub_left" type="str" value="$(arg camera_sub_left)" />
+        <param name="camera_sub_right" type="str" value="$(arg camera_sub_right)" />
+    </node>
+</launch>

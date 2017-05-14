@@ -9,6 +9,9 @@
 #include <cmath>
 #include <string>
 
+// ROS
+#include "ros/ros.h"
+
 // Namespaces
 using namespace cv;
 // Defines
