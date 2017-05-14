@@ -55,6 +55,11 @@ Roadmap::Roadmap(ros::NodeHandle h, std::string path)
         load_roadmap(path);
 	initRobworkStuff();
 
+	std::stringstream buffer1;
+	buffer1 << "RobotEnd " << *(_device1->getEnd()) << std::endl;
+	ROS_INFO("%s", buffer1.str().c_str());
+	
+
 	//Roadmap(h, _size, _resolution, _connection_radius, _max_density);
 
         int non = nonConnectedNodes();
@@ -196,10 +201,10 @@ bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &
 
 void Roadmap::find_path(rw::math::Q init, rw::math::Q goal)
 {
-	int initId = _kdtree->nnSearch(init).value->nodenum;
-	int goalId = _kdtree->nnSearch(goal).value->nodenum;
+	int initId = nodesInRange(init);
+	int goalId = nodesInRange(goal);
 	rovi2::path path;
-	if(initId != goalId)
+	if(initId != NULL && goalId != NULL && initId != goalId)
 		planner->find_path(initId, goalId, path);
 
 
@@ -317,6 +322,34 @@ std::vector<Node*> Roadmap::nodesInRange(Node *a)
 
 }; 
 
+int Roadmap::nodesInRange(rw::math::Q a)
+{
+	_kdnodesSearchResult.clear();
+	int temp = NULL;
+	double close = 10000000;
+
+	
+        _kdtree->nnSearchElipse(a, _radi ,_kdnodesSearchResult);
+	for (std::list<const rwlibs::algorithms::KDTreeQ<Node*>::KDNode*>::const_iterator iterator = _kdnodesSearchResult.begin(), end = _kdnodesSearchResult.end(); iterator != end; ++iterator)
+	{
+		double dist = _metric->distance(a, (*iterator)->value->q_val);
+		
+		if(dist < close)
+		{
+			close = dist;
+			temp = (*iterator)->value->nodenum;
+		}
+
+		
+
+
+
+	}
+	return temp;		
+
+}; 
+
+
 void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost)
 {
 	std::vector<Node*> addAble(0);
@@ -423,11 +456,12 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 			{
 				if(threads.at(j) != nullptr && threads.at(j)->joinable())
 				{
-					if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
-					{
+					//if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
+					//{
+						threads.at(j)->join();
 						delete threads.at(j);
 						threads.at(j) = nullptr;
-					}
+					//}
 				}
 
 			}
@@ -444,11 +478,12 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 				{
 					if(threads.at(j) != nullptr && threads.at(j)->joinable())
 					{
-						if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
-						{
+						//if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
+						//{
+							threads.at(j)->join();
 							delete threads.at(j);
 							threads.at(j) = nullptr;
-						}
+						//}
 					}
 				}
 
@@ -684,14 +719,19 @@ void Roadmap::initRobworkStuff()
 
 	// Create the metric
 	_metric = rw::math::MetricFactory::makeWeightedEuclidean<rw::math::Q>(_metricWeights);
-
+	//_metric = rw::math::MetricFactory::makeEuclidean<rw::math::Q>();
+	
 	std::stringstream buffer;
 	buffer << "Bounds +/- " << (_device1->getBounds().second)[0] << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
-
+	//_metricWeights = rw::math::Q(6,1,1,1,1,1,1);
 
 	_radi = _metricWeights;
+
+	std::stringstream buffer3;
+	buffer3 << "Weights " << _metricWeights << std::endl;
+	ROS_INFO("%s", buffer3.str().c_str());
 
         for(size_t i=0;i<_radi.size();i++){
             _radi[i] = _connection_radius/std::max(_metricWeights(i),0.1);
@@ -927,8 +967,8 @@ int main(int argc, char **argv)
   time(&start);
   ros::init(argc,argv,"roadmap31");
   ros::NodeHandle n;
-/*
-  Roadmap Roadmap_ros(n, 50000, 0.01, 0.5, 0.36);
+
+  /*Roadmap Roadmap_ros(n, 1000, 0.01, 2.5, 0.7);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -939,7 +979,7 @@ int main(int argc, char **argv)
 	ROS_INFO("Could not create Roadmap!");
   
   Roadmap_ros.connectedComponents();
-  Roadmap_ros.save_roadmap("Roadmap_50000_0p01_0p5_0p36_first.txt");
+  Roadmap_ros.save_roadmap("Roadmap_1000_0p01_2p5_0p7_connected.txt");
  
   time(&end);
   double dif = difftime(end, start);
@@ -952,9 +992,9 @@ int main(int argc, char **argv)
 
 
 
-*/
-  
-   Roadmap Roadmap_ros(n, "Roadmap_1000_0p01_1p1_0p85_first.txt");
+
+  */
+   Roadmap Roadmap_ros(n, "Roadmap_1000_0p01_2p0_0p7_connected.txt");
    std::stringstream buffer;
 	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" <<     std::endl;
 	ROS_INFO("%s", buffer.str().c_str());

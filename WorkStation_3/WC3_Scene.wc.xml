@@ -17,9 +17,13 @@
   </Frame>
   <Include file="WSG50/WSG50.wc.xml"/>
 
+
+
+
  <Frame name="TempCam" refframe="WORLD">
   <RPY> -90 0 -119 </RPY> <Pos> -1.9 0 2.3 </Pos>
   </Frame>
+
 
   <Frame name="Ball" refframe="Robot" type="Movable">
     <RPY> 0 0 0 </RPY> <Pos> 0 -1.5 1 </Pos>

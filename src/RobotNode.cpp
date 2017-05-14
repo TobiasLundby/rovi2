@@ -13,6 +13,7 @@ RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 	RobotNode_ros::initWorkCell();
 	RobotNode_ros::initDevice();
 	service_nonlinear = _nodehandle.advertiseService("rovi2/robot_node/Move_nonlinear_ptp", &RobotNode_ros::Move_nonlinear_ptp, this);
+	service_servo = _nodehandle.advertiseService("rovi2/robot_node/Move_servo_ptp", &RobotNode_ros::Move_servo_ptp, this);
 	service_inverse = _nodehandle.advertiseService("rovi2/robot_node/MoveXYZ", &RobotNode_ros::Move_xyz, this);
         state_updater = _nodehandle.advertise<rovi2::State>("rovi2/robot_node/Robot_state", 1);
 };
@@ -129,9 +130,9 @@ void RobotNode_ros::StatePublisher()
 			current_state.q = RobotNode_ros::toRos(urrt_data.qActual);
 			current_state.dq = RobotNode_ros::toRos(urrt_data.dqActual);
 			bool is_moving = false;
-			for(int i = 0; i< 6; i++)
+			for(int i = 0; i< 5; i++)
 			{
-				if(fabs(urrt_data.dqActual[i]) > 0.001)
+				if(fabs(urrt_data.dqActual[i]) > 0.0001)
 				{
 					is_moving = true;
 					break;
@@ -156,7 +157,20 @@ bool RobotNode_ros::Move_nonlinear_ptp(rovi2::MovePtp::Request & request, rovi2:
 {
 	//TODO check for bounds!
 	rw::math::Q newQ = RobotNode_ros::toRw(request.target);
+	_device->setQ(newQ, _state);
 	_ur->moveQ(newQ, 1.0);
+	res.success = true;
+
+	return true;
+	
+}
+
+bool RobotNode_ros::Move_servo_ptp(rovi2::MovePtp::Request & request, rovi2::MovePtp::Response &res)
+{
+	//TODO check for bounds!
+	rw::math::Q newQ = RobotNode_ros::toRw(request.target);
+	_device->setQ(newQ, _state);
+	_ur->servo(newQ);
 	res.success = true;
 
 	return true;

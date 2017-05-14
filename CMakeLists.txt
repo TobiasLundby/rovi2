@@ -148,7 +148,7 @@ if (SHOULD_BUILD)
   target_link_libraries(StudioPlugin ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
 
   include_directories(vision_test
-    include
+    include 
     ${ROBWORK_INCLUDE_DIR}
     ${ROBWORKHARDWARE_INCLUDE_DIRS}
     ${ROBWORKSTUDIO_INCLUDE_DIRS}

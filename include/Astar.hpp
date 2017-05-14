@@ -21,6 +21,7 @@
 
 
 
+
 class Node;
 
 
@@ -34,6 +35,8 @@ public:
 
 	void find_path(int startNodeId, int goalNodeId, rovi2::path &path);
 
+	rovi2::Q toRos(const rw::math::Q& q);
+
 	
 	~Astar();
 
@@ -46,6 +49,7 @@ private:
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint;
    	std::priority_queue<Node*, std::vector<Node*>, sort_func> *_openList = nullptr;
+
 	double calc_h(int cId, int gId);
 
 

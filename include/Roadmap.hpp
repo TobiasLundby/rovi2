@@ -124,6 +124,7 @@ protected:
 	bool addNode();
 
 	std::vector<Node*> nodesInRange(Node *a); 
+	int nodesInRange(rw::math::Q a);
 	void addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost = std::vector<double>(0));
 	void connectGraph();
 

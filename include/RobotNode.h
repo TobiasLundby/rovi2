@@ -36,6 +36,7 @@ public:
 	virtual ~RobotNode_ros();
  
 	bool Move_nonlinear_ptp(rovi2::MovePtp::Request & request, rovi2::MovePtp::Response &res);
+	bool Move_servo_ptp(rovi2::MovePtp::Request &request, rovi2::MovePtp::Response &res);
 	bool Move_xyz(rovi2::Movexyz::Request &request, rovi2::Movexyz::Response &res);
 
 	void StatePublisher();
@@ -62,6 +63,7 @@ protected:
 
 	ros::NodeHandle _nodehandle;
 	ros::ServiceServer service_nonlinear;
+	ros::ServiceServer service_servo;
 	ros::ServiceServer service_inverse;
   	rw::models::WorkCell::Ptr _workcell;
 	rw::kinematics::State _state;
