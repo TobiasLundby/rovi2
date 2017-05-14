@@ -3,6 +3,7 @@
 #include "ros/ros.h"
 #include "rovi2/position2D.h"
 #include "rovi2/position3D.h"
+#include "rovi2/velocityXYZ.h"
 
 // Image
 #include <image_transport/image_transport.h>
@@ -10,9 +11,11 @@
 #include <sensor_msgs/image_encodings.h>
 
 // OPENCV
+//#include <opencv2/core/core.hpp>
 #include "opencv2/opencv.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+//#include "opencv2/video/tracking.hpp"
 #include <string>
 
 // Subsriber syncrhonizer
@@ -36,6 +39,11 @@ rovi2::position2D msg_undist_right;
 ros::Publisher position_pub_left;
 ros::Publisher position_pub_right;
 
+// NOTE: GLOBAL VALUES; EASIER FOR FINDING THE VELOCITY SINCE YOU CAN JUST SUBSCRIBE INSTEAD OF LOOKING IN THE FILE
+rovi2::velocityXYZ msg_velocity;
+ros::Publisher position_velocity;
+int image_number = 0;
+
 std::vector<float> calculate_3D_error()
 /* Input:   */
 /* Output: a vector of the error in the u (x) and v (y) directions */
@@ -54,8 +62,8 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     right_point.at<Vec2d>(0)[1] = right_y;
 
     /* LEFT CALIBRATION */
-    double img_width_l = 1024;
-    double img_height_l = 768;
+    // double img_width_l = 1024;
+    // double img_height_l = 768;
 
     Mat camera_matrix_l = Mat::zeros(3,3,CV_64F);
     camera_matrix_l.at<double>(0,0) = 1366.940645;
@@ -94,8 +102,8 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     proj_l_ros.at<double>(2,2) = 1.0;
 
     /* RIGHT CALIBRATION */
-    double img_width_r = 1024;
-    double img_height_r = 768;
+    // double img_width_r = 1024;
+    // double img_height_r = 768;
 
     Mat camera_matrix_r = Mat::zeros(3,3,CV_64F);
     camera_matrix_r.at<double>(0,0) = 1372.805317;
@@ -205,16 +213,17 @@ void callback(
         cv::imshow("Left input", cv_left_ptr->image);
         cv::imshow("Right input", cv_right_ptr->image);
     }
-    cv::waitKey(3);
+    cv::waitKey(3); // Waitkey is nessecary for proper GUI showing
 
-    // Output modified video stream
+    // Output modified video stream - disabled due to limited arguments and not needed elesewhere
     //image_pub_left_ptr.publish(cv_left_ptr->toImageMsg());
     //image_pub_right_ptr.publish(cv_right_ptr->toImageMsg());
 
-    // Find the left ball
+    // NOTE: Find the left ball
     std::vector<Point2f> position_left;
     position_left = deterctor_left_obj_ptr.FindMarker(cv_left_ptr->image);
     ROS_INFO("Found [%ld] ball", (long int)position_left.size());
+    // Publish the left ball location - disabled due to limited arguments and not needed elesewhere
     if(position_left.size() > 0)
     {
         rovi2::position2D msg;
@@ -223,10 +232,11 @@ void callback(
         //pos_pub_left_ptr.publish(msg); // Publish it
     }
 
-    // Find the right ball
+    // NOTE: Find the right ball
     std::vector<Point2f> position_right;
     position_right = deterctor_right_obj_ptr.FindMarker(cv_right_ptr->image);
     ROS_INFO("Found [%ld] ball", (long int)position_right.size());
+    // Publish the right ball location - disabled due to limited arguments and not needed elesewhere
     if(position_right.size() > 0)
     {
         rovi2::position2D msg;
@@ -235,32 +245,68 @@ void callback(
         //pos_pub_right_ptr.publish(msg); // Publish it
     }
 
+    // Prepare variables
     rovi2::position3D msg;
     Mat_<float> measurement(3,1);
     measurement.setTo(Scalar(0));
-    // Triangulation here
+    // NOTE: Triangulate if a ball has been found
     if(position_right.size() > 0 and position_left.size() > 0 ) {
+        // Prepare vector for traingulation and triangulate the 2 2D points
         std::vector<float> triangluated_point;
         triangluated_point = calculate_3D_point((double)position_left.at(0).x, (double)position_left.at(0).y, (double)position_right.at(0).x, (double)position_right.at(0).y);
+
         if(triangluated_point.size() > 0)
         {
+            // Publish the triangualted point before Kalman
             msg.x = (float)triangluated_point.at(0);
             msg.y = (float)triangluated_point.at(1);
             msg.z = (float)triangluated_point.at(2);
             pos_pub_triangulated_ptr.publish(msg); // Publish it
 
-            //Kalman filter the pos and predict; using KF_ptr
+            // Note triangulated point in the right format for correcting
             measurement(0) = (float)triangluated_point.at(0);
             measurement(1) = (float)triangluated_point.at(1);
             measurement(2) = (float)triangluated_point.at(2);
 
+            // Correct the estimate and publish the corrected estimate
             Mat estimated = KF_ptr.correct(measurement);
             msg.x = estimated.at<float>(0);
             msg.y = estimated.at<float>(1);
             msg.z = estimated.at<float>(2);
             kalman_pub_estimate_ptr.publish(msg); // Publish it
+
+            // Velocity publisher and calculator
+            // NOTE: THIS IS MADE WITH A GLOBAL VARIABLE - DELETE LATER
+            msg_velocity.x_dot = estimated.at<float>(3);
+            msg_velocity.y_dot = estimated.at<float>(4);
+            msg_velocity.z_dot = estimated.at<float>(5);
+            msg_velocity.p_dot = sqrt(pow(estimated.at<float>(3),2)+pow(estimated.at<float>(4),2)+pow(estimated.at<float>(5),2));
+            position_velocity.publish(msg_velocity); // Publish it
+            // Save to file
+            std::string calib_path = "/home/tobiaslundby/Desktop/image_log"; // This is also used for saving the images
+            std::ofstream file;
+            file.open(calib_path+"/velocities.log",std::ios::app);
+            file << msg_velocity.x_dot << "\t";
+            file << msg_velocity.y_dot << "\t";
+            file << msg_velocity.z_dot << "\t";
+            file << msg_velocity.p_dot << "\t";
+            file << std::endl;
+            file.close();
+
+            // Save image
+            if(true)
+            {
+                std::ostringstream name_left;
+                name_left << calib_path << "/image_left/" << std::to_string(image_number) << ".jpg";
+                std::ostringstream name_right;
+                name_right << calib_path << "/image_right/" << std::to_string(image_number) << ".jpg";
+                cv::imwrite(name_left.str(),cv_left_ptr->image);
+                cv::imwrite(name_right.str(),cv_right_ptr->image);
+            }
+            image_number++;
         }
     }
+    // Predict and publish the prediction even if no ball has been deteced
     Mat prediction = KF_ptr.predict();
     msg.x = prediction.at<float>(0);
     msg.y = prediction.at<float>(1);
@@ -300,20 +346,20 @@ int main(int argc, char** argv)
         ROS_ERROR("Failed to get parameters");
     }
 
+    // NOTE: Subcribe to input camera feeds
     std::string input_topic_cam_left = parameter_left;
     std::string input_topic_cam_right = parameter_right;
-
     ROS_INFO("Left  image topic: %s", input_topic_cam_left.c_str());
     ROS_INFO("Right image topic: %s", input_topic_cam_right.c_str());
-
     message_filters::Subscriber<sensor_msgs::Image> image_left(nh_, input_topic_cam_left, 1);
     message_filters::Subscriber<sensor_msgs::Image> image_right(nh_, input_topic_cam_right, 1);
 
+    // NOTE: Setup the synchronizer
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
     // ApproximateTiros::Publisher position_pub_left;me takes a queue size as its constructor argument, hence MySyncPolicy(10)
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_left, image_right);
 
-    // Image conversion - NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
+    // NOTE: Image conversion - NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
     // std::string output_topic_cam_left = node_name + "/bb_cam_opencv_left";
     // std::string output_topic_cam_right = node_name + "/bb_cam_opencv_right";
     // ROS_INFO("Left  OpenCV image topic (output): %s", output_topic_cam_left.c_str());
@@ -322,7 +368,7 @@ int main(int argc, char** argv)
     // image_transport::Publisher image_pub_left = it_.advertise(output_topic_cam_left, 1);
     // image_transport::Publisher image_pub_right = it_.advertise(output_topic_cam_right, 1);
 
-    // Position publisher - LEFT AND RIGHT POS NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
+    // NOTE: Position publisher - LEFT AND RIGHT POS NOT USED ANYMORE AS TOPIC BUT AS INTERNAL VALUE
     // std::string output_topic_position_left = node_name + "/pos_left";
     // std::string output_topic_position_right = node_name + "/pos_right";
     std::string output_topic_position_triangulated = node_name + "/pos_triangulated";
@@ -330,16 +376,15 @@ int main(int argc, char** argv)
     // ros::Publisher position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
     ros::Publisher position_pub_triangulated = nh_.advertise<rovi2::position3D>(output_topic_position_triangulated,1);
 
-    // Ball detector objects; two have been made if different settings are required later
+    // NOTE: Ball detector objects; two have been made if different settings are required later
     ColorDetector detector_left;
     detector_left.set_result_window_name("Left result 2D");
     ColorDetector detector_right;
     detector_right.set_result_window_name("Right result 2D");
 
-    // Kalman filter
-    float delta_t = 1/CAM_FREQ;
-    cv::KalmanFilter KF(9, 3, 0);
-
+    // NOTE: Kalman filter
+    float delta_t = 1.0/CAM_FREQ;
+    KalmanFilter KF(9, 3, 0);
     // intialization of KF...
     KF.transitionMatrix = (Mat_<float>(9, 9) <<
     1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
@@ -351,7 +396,6 @@ int main(int argc, char** argv)
     0,0,0,0,0,0,1,0,0,
     0,0,0,0,0,0,0,1,0,
     0,0,0,0,0,0,0,0,1);
-
     //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
     KF.statePre.at<float>(0) = 0; //x
     KF.statePre.at<float>(1) = 0; //y
@@ -362,7 +406,7 @@ int main(int argc, char** argv)
     KF.statePre.at<float>(6) = 0; //xdotdot
     KF.statePre.at<float>(7) = 0; //ydotdot
     KF.statePre.at<float>(8) = 0; //zdotdot
-
+    // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
     setIdentity(KF.measurementMatrix);
     /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
     setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
@@ -371,23 +415,30 @@ int main(int argc, char** argv)
     /* Initial error */
     setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
 
-    // Kalman publisher
+    // NOTE: Kalman publisher
     std::string kalman_estimate_str = node_name + "/kalman_estimate";
     std::string kalman_prediction_str = node_name + "/kalman_prediction";
     ros::Publisher kalman_pub_estimate = nh_.advertise<rovi2::position3D>(kalman_estimate_str,1);
     ros::Publisher kalman_pub_prediction = nh_.advertise<rovi2::position3D>(kalman_prediction_str,1);
 
+    // NOTE: THIS IS MADE WITH A GLOBAL VARIABLE - DELETE LATER
     std::string output_topic_position_left = ros::this_node::getName() + "/pos_left";
     std::string output_topic_position_right = ros::this_node::getName() + "/pos_right";
     position_pub_left = nh_.advertise<rovi2::position2D>(output_topic_position_left,1);
     position_pub_right = nh_.advertise<rovi2::position2D>(output_topic_position_right,1);
 
+    // NOTE: THIS IS MADE WITH A GLOBAL VARIABLE - DELETE LATER
+    std::string output_topic_velocity = ros::this_node::getName() + "/velocity";
+    position_velocity = nh_.advertise<rovi2::velocityXYZ>(output_topic_velocity,1);
+
+    // NOTE: Register the callback function, be aware of the argument limit of boost (if more arguments are needed then these can be passed using a vector structure or similar with multiple elements)
     sync.registerCallback(boost::bind(&callback, _1, _2,
         /*image_pub_left, image_pub_right,*/
         /*position_pub_left, position_pub_right,*/ position_pub_triangulated,
         detector_left, detector_right,
         KF,kalman_pub_estimate,kalman_pub_prediction));
 
+    // NOTE: Leave the rest of the scheduling to ROS
     while( ros::ok() ){
         ros::spin();
     }

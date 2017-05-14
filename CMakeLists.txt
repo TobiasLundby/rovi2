@@ -63,6 +63,7 @@ if (SHOULD_BUILD)
 	  State.msg
     position2D.msg
     position3D.msg
+    velocityXYZ.msg
 	xyz.msg
 	path.msg
 	)
@@ -117,6 +118,11 @@ if (SHOULD_BUILD)
   add_dependencies(image_converter sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
 
   #find_package( OpenCV REQUIRED ) # Required below
+  # Print some message showing some of them
+  #message(STATUS "OpenCV library status:")
+  #message(STATUS "    version: ${OpenCV_VERSION}")
+  #message(STATUS "    libraries: ${OpenCV_LIBS}")
+  #message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
   add_executable(ball_locator_3d src/ball_locator_3d.cpp src/ColorDetector.cpp)
   #target_link_libraries(ball_locator_3d ${catkin_LIBRARIES} ${OpenCV_LIBS} )
   target_link_libraries(ball_locator_3d ${catkin_LIBRARIES} )
