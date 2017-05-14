@@ -485,6 +485,27 @@ void callback(
 
 int main(int argc, char** argv)
 {
+  // cv::Mat E_m = cv::Mat::zeros(4,4,CV_64F);
+  // E_m.at<double>(0,0) = 1.0e-0;
+  // E_m.at<double>(1,1) = 1.0e-0;
+  // E_m.at<double>(2,2) = 1.0e-0;
+  // E_m.at<double>(3,3) = 1.0e-0;
+  //
+  // cv::Point2f point_2D_left;
+  // cv::Point2f point_2D_right;
+  // point_2D_left.x = 1.0;
+  // point_2D_left.y = 1.0;
+  // point_2D_right.x = 1.0;
+  // point_2D_right.y = 1.0;
+  //
+  // cv::Mat E_M = propagate_error_2D_to_3D(E_m, point_2D_left, point_2D_right);
+  // std::stringstream buf;
+  // buf << E_M.at<double>(0,0) << "\t" << E_M.at<double>(0,1) << "\t" << E_M.at<double>(0,2) << std::endl;
+  // buf << E_M.at<double>(1,0) << "\t" << E_M.at<double>(1,1) << "\t" << E_M.at<double>(1,2) << std::endl;
+  // buf << E_M.at<double>(2,0) << "\t" << E_M.at<double>(2,1) << "\t" << E_M.at<double>(2,2) << std::endl;
+  //
+  // ROS_ERROR("E_M \n %s",buf.str().c_str());
+
     ros::init(argc, argv, "ball_locator_3d");
 
     ros::NodeHandle nh_; // Create node handler
