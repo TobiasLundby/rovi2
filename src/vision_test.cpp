@@ -41,7 +41,7 @@ void vision_test::robot_status_callback(const rovi2::State &msg)
 void vision_test::triangulated_callback(const rovi2::position3D &msg)
 {
   triangulated_pos = msg;
-  //ROS_INFO("Got a position");
+  //ROS_INFO("Triangulated: %f\t%f\t%f", msg.x, msg.y msg.z);
 }
 
 void vision_test::estimated_callback(const rovi2::position3D &msg)

@@ -1,6 +1,8 @@
 #include "ros/ros.h"
 #include "rovi2/xyz.h"
 #include "rovi2/Movexyz.h"
+#include "rovi2/State.h"
+#include "rovi2/Q.h"
 
 #include <rw/rw.hpp>
 #include <rw/math.hpp>
@@ -15,12 +17,34 @@
 #include <rw/math/RPY.hpp>
 #include <sstream>
 
+rovi2::State robot_state;
+
+void robot_status_callback(const rovi2::State &msg)
+{
+  ROS_INFO("ROBOT_CALLBACK");
+  robot_state = msg;
+  //ROS_INFO("Got a state");
+}
+
+rw::math::Q toRw(const rovi2::Q& q)
+{ // From RobWork
+  rw::math::Q res(q.data.size());
+  for (std::size_t i = 0; i < q.data.size(); ++i)
+  {
+    res(i) = q.data[i];
+  }
+  return res;
+}
+
 int main(int argc, char** argv)
 {
   ROS_INFO("vision_test_robot_node starting...");
   ros::init(argc, argv, "vision_test_robot_node");
   ros::NodeHandle n;
 
+  ros::Subscriber subscribe_robot_status = n.subscribe("/rovi2/robot_node/Robot_state",0,robot_status_callback);
+  ros::Duration(10).sleep();
+  ros::spinOnce();
   rw::math::Vector3D<double> transP(-0.116075, -1.67057, 1.33754);
   rw::math::Rotation3D<double> transR(rw::math::RPY<double>(-0.0375525, -0.0132076, -2.0942).toRotation3D());
   rw::math::Transform3D<double> trans(transP, transR);
@@ -44,20 +68,20 @@ int main(int argc, char** argv)
     std::cout << "TCP_marker not found" << std::endl;
   }
 
+
+  rw::math::Q q = toRw(robot_state.q);
+
   std::stringstream buf;
   buf << *(robot_base) << " , " << *(TCP_marker) << std::endl;
   ROS_INFO("%s",buf.str().c_str());
   //rw::math::Q q(6,-0.4588, -1.7026, -0.9179, -0.5139, 0.4561, 0.0188);
-  rw::math::Q q(6,-0.45886514427998293, -1.7026772253206577, -0.9179848271019003, -0.513925856428815, 0.45612188890540106, 0.0188171385940185);
+  //rw::math::Q q(6,-0.45886514427998293, -1.7026772253206577, -0.9179848271019003, -0.513925856428815, 0.45612188890540106, 0.0188171385940185);
   _device->setQ(q,_state);
   rw::math::Vector3D<double> robot_p = robot_base->fTf(TCP_marker,_state).P();
   ROS_INFO("Robot start:");
   buf.str("");
   buf << "Position: "<< robot_p(0) << " " << robot_p(1) << " " << robot_p(2);
   ROS_INFO("%s",buf.str().c_str());
-  ROS_INFO("%d",robot_p(0));
-  ROS_INFO("%d",robot_p(1));
-  ROS_INFO("%d",robot_p(2));
 
   rovi2::Movexyz service_call;
   //rovi2::xyz;
@@ -65,9 +89,9 @@ int main(int argc, char** argv)
   rw::math::Vector3D<double> pos_robot(-0.26, -0.13, 1.22);
   pos_robot = trans*pos_robot;
 
-  service_call.request.target.data.push_back(robot_p(0)+0.02);//-0.4);//[0] = -0.4;
+  service_call.request.target.data.push_back(robot_p(0));//-0.4);//[0] = -0.4;
   service_call.request.target.data.push_back(robot_p(1));//-0.4); //[1] = -0.4;
-  service_call.request.target.data.push_back(robot_p(2));//0.6);
+  service_call.request.target.data.push_back(robot_p(2)-0.02);//0.6);
   service_call.request.target.data.push_back(0);
   service_call.request.target.data.push_back(0);
   service_call.request.target.data.push_back(0);

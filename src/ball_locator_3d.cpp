@@ -283,19 +283,26 @@ void callback(
             msg_velocity.p_dot = sqrt(pow(estimated.at<float>(3),2)+pow(estimated.at<float>(4),2)+pow(estimated.at<float>(5),2));
             position_velocity.publish(msg_velocity); // Publish it
             // Save to file
-            std::string calib_path = "/home/tobiaslundby/Desktop/image_log"; // This is also used for saving the images
-            std::ofstream file;
-            file.open(calib_path+"/velocities.log",std::ios::app);
-            file << msg_velocity.x_dot << "\t";
-            file << msg_velocity.y_dot << "\t";
-            file << msg_velocity.z_dot << "\t";
-            file << msg_velocity.p_dot << "\t";
-            file << std::endl;
-            file.close();
-
-            // Save image
-            if(true)
+            if(false)
             {
+                std::string calib_path = "/home/mathias/Desktop/image_log"; // This is also used for saving the images
+                std::ofstream file;
+                file.open(calib_path+"/velocities.log",std::ios::app);
+                file << (float)triangluated_point.at(0) << "\t";
+                file << (float)triangluated_point.at(1) << "\t";
+                file << (float)triangluated_point.at(2) << "\t";
+                file << estimated.at<float>(0) << "\t";
+                file << estimated.at<float>(1) << "\t";
+                file << estimated.at<float>(2) << "\t";
+                file << msg_velocity.x_dot << "\t";
+                file << msg_velocity.y_dot << "\t";
+                file << msg_velocity.z_dot << "\t";
+                file << msg_velocity.p_dot << "\t";
+                file << std::endl;
+                file.close();
+
+                // Save image
+
                 std::ostringstream name_left;
                 name_left << calib_path << "/image_left/" << std::to_string(image_number) << ".jpg";
                 std::ostringstream name_right;

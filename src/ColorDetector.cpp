@@ -92,8 +92,10 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     detector->detect( mask_MR, keypoints_MR);
     if(DEBUG_RESULT)
     {
-        drawKeypoints(image,keypoints_MR,image,Scalar(0,255,0),DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        imshow(window_name,image);
+        Mat image_local;
+        image.copyTo(image_local);
+        drawKeypoints(image_local,keypoints_MR,image_local,Scalar(0,255,0),DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        imshow(window_name,image_local);
     }
 
     /* Calculate error; only for the largest blob */
