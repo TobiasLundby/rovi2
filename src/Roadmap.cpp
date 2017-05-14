@@ -13,26 +13,27 @@
 #include <fstream>
 #include <sstream>
 #include <boost/algorithm/string.hpp>
+#include <boost/chrono.hpp>
 #include <stdlib.h>
-#include "Astar.hpp"
 #include <time.h>
 #include <stdio.h>
 #include <iomanip>
+#include "Astar.hpp"
 
 
-Roadmap::Roadmap(int size, double resolution, double connection_radius, double max_density):
+
+Roadmap::Roadmap(ros::NodeHandle h, int size, double resolution, double connection_radius, double max_density):
 
 	_resolution(resolution),
 	_size(size),
 	_connection_radius(connection_radius),
-	_max_density(max_density)
+	_max_density(max_density),
+	_nodehandle(h)
 
 {
-	if(_workcell1 == nullptr)
-	{
-		initWorkCell();
-	}
 
+	initWorkCell();
+	
 	initRobworkStuff();
 
 	threads.push_back(nullptr);
@@ -43,17 +44,23 @@ Roadmap::Roadmap(int size, double resolution, double connection_radius, double m
 	std::stringstream buffer;
 	buffer << "Default state: " << _device1->getQ(_state1) << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
-	_astar = new Astar(_size, _graph, _metric, _constraint1, _edgeConstraint1);
 	
 
 };
 
-Roadmap::Roadmap(std::string path)
+Roadmap::Roadmap(ros::NodeHandle h, std::string path)
 {
 	initWorkCell();
-        load_roadmap(path);
 
-	Roadmap(_size, _resolution, _connection_radius, _max_density);
+        load_roadmap(path);
+	initRobworkStuff();
+
+	std::stringstream buffer1;
+	buffer1 << "RobotEnd " << *(_device1->getEnd()) << std::endl;
+	ROS_INFO("%s", buffer1.str().c_str());
+	
+
+	//Roadmap(h, _size, _resolution, _connection_radius, _max_density);
 
         int non = nonConnectedNodes();
 
@@ -61,13 +68,156 @@ Roadmap::Roadmap(std::string path)
 	buffer << "ConnectedNodes: " << _actualSize - non << " , nonConnectedNodes: " << non << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
+	planner = new Astar(_size, _graph, _metric, _constraintAstar, _edgeConstraintAstar);
+	service_start_plan = _nodehandle.advertiseService("rovi2/Roadmap/StartPlan", &Roadmap::start_plan, this);
+	path_publisher = _nodehandle.advertise<rovi2::path>("rovi2/Roadmap/Path", 1);
+	service_next_conf = _nodehandle.advertiseService("rovi2/Roadmap/NextConf", &Roadmap::check_plan, this);
+	
 
 
 }
 
 Roadmap::~Roadmap()
 {
+	for(int i = 0; i< _graph->size(); i++)
+		delete _graph->at(i);
+	delete _graph;
+
+	delete _workcell1;
+  	delete _workcell2;
+  	delete _workcell3;
+  	delete _workcell4;
+	delete _workcellAstar;
+  	delete _device1;
+  	delete _device2;
+  	delete _device3;
+  	delete _device4;
+	delete _deviceAstar;
+	delete _detector1;
+	delete _detector2;
+	delete _detector3;
+	delete _detector4;
+	delete _detectorAstar;
+
+	/*delete _constraint1;
+	delete _constraint2;
+	delete _constraint3;
+	delete _constraint4;
+	delete _constraintAstar;
+	delete _edgeConstraint1;
+	delete _edgeConstraint2;
+	delete _edgeConstraint3;
+	delete _edgeConstraint4;
+	delete _edgeConstraintAstar;
+	delete _strategy1;
+	delete _strategy2;
+	delete _strategy3;
+	delete _strategy4;
+	delete _strategyAstar;*/
+	delete _metric;
+	delete _kdtree;
+	//delete _sampler;
+	/*if(planner != nullptr)
+		delete planner;
+	if(astar_thread != nullptr)
+		delete astar_thread;*/
 };
+
+/************************************************************************
+ * Q  -> lend from Caros
+ ************************************************************************/
+rw::math::Q Roadmap::toRw(const rovi2::Q& q)
+{
+  rw::math::Q res(q.data.size());
+  for (std::size_t i = 0; i < q.data.size(); ++i)
+  {
+    res(i) = q.data[i];
+  }
+  return res;
+}
+
+rovi2::Q Roadmap::toRos(const rw::math::Q& q)
+{
+  rovi2::Q res;
+  res.data.resize(q.size());
+  for (std::size_t i = 0; i < q.size(); ++i)
+  {
+    res.data[i] = static_cast<double>(q(i));
+  }
+  return res;
+}
+
+bool Roadmap::check_plan(rovi2::Conf::Request & request, rovi2::Conf::Response &res)
+{
+	if(!_constraintAstar->inCollision(_graph->at(request.second)->q_val))
+	{
+		if(!_edgeConstraintAstar->inCollision(_graph->at(request.first)->q_val, _graph->at(request.second)->q_val))
+		{
+			res.target = toRos(_graph->at(request.first)->q_val);
+			res.success = true;
+			return true;
+
+		}
+
+	}
+
+	res.success = false;
+	return true;
+
+
+}
+
+
+bool Roadmap::start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res)
+{
+	if(astar_thread != nullptr)
+	{
+		if(astar_thread->try_join_for(boost::chrono::milliseconds(1)))
+		{
+			delete astar_thread;
+			astar_thread = nullptr;
+		}
+		else
+			res.success = false;
+
+	}
+
+
+	if(astar_thread == nullptr)
+	{
+		rw::math::Q init = Roadmap::toRw(request.init);
+		rw::math::Q goal = Roadmap::toRw(request.goal);
+		std::vector<int> path(0);
+		astar_thread = new boost::thread(boost::bind(&Roadmap::find_path, this, init, goal));
+		res.success = true;
+	}
+
+
+
+	
+	return true;
+
+}
+
+void Roadmap::find_path(rw::math::Q init, rw::math::Q goal)
+{
+	int initId = nodesInRange(init);
+	int goalId = nodesInRange(goal);
+	rovi2::path path;
+	if(initId != NULL && goalId != NULL && initId != goalId)
+		planner->find_path(initId, goalId, path);
+
+
+	
+	path_publisher.publish(path);
+	std::stringstream path_length;
+	path_length << "Path_length: " << path.data.size() << std::endl;
+	ROS_INFO("%s", path_length.str().c_str());
+	
+	
+
+
+}
 
 bool Roadmap::inCollision(Node *n)
 {
@@ -90,6 +240,18 @@ void Roadmap::addNode(rw::math::Q n, int nodeid, bool c, bool u)
 	tempNode->connected_component = c;
 	tempNode->usable = u;
 	_graph->push_back(tempNode);
+	if(u)
+		_kdtree->addNode(n, tempNode);
+	 
+
+};
+
+void Roadmap::addNode(rw::math::Q n, int nodeid)
+{
+	Node* tempNode = new Node(n, nodeid);
+	tempNode->connected_component = false;
+	tempNode->usable = false;
+	_graph->push_back(tempNode);
 	_kdtree->addNode(n, tempNode);
 	 
 
@@ -102,7 +264,7 @@ bool Roadmap::addNode()
 		return false;
 	else if(!distanceTooClose(sample))
 	{
-		addNode(sample, _actualSize, false, false);
+		addNode(sample, _actualSize);
 		_actualSize++;
 		return true;
 	}
@@ -145,9 +307,9 @@ std::vector<Node*> Roadmap::nodesInRange(Node *a)
 		
 		if(dist <= _connection_radius)
 		{
-			std::stringstream buffer;
-		buffer << "dist " << dist << std::endl;
-		//ROS_ERROR("%s", buffer.str().c_str());
+			//std::stringstream buffer;
+			//buffer << "dist " << dist << std::endl;
+			//ROS_ERROR("%s", buffer.str().c_str());
 			res.push_back((*iterator)->value);
 		}
 
@@ -160,9 +322,38 @@ std::vector<Node*> Roadmap::nodesInRange(Node *a)
 
 }; 
 
+int Roadmap::nodesInRange(rw::math::Q a)
+{
+	_kdnodesSearchResult.clear();
+	int temp = NULL;
+	double close = 10000000;
+
+	
+        _kdtree->nnSearchElipse(a, _radi ,_kdnodesSearchResult);
+	for (std::list<const rwlibs::algorithms::KDTreeQ<Node*>::KDNode*>::const_iterator iterator = _kdnodesSearchResult.begin(), end = _kdnodesSearchResult.end(); iterator != end; ++iterator)
+	{
+		double dist = _metric->distance(a, (*iterator)->value->q_val);
+		
+		if(dist < close)
+		{
+			close = dist;
+			temp = (*iterator)->value->nodenum;
+		}
+
+		
+
+
+
+	}
+	return temp;		
+
+}; 
+
+
 void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost)
 {
 	std::vector<Node*> addAble(0);
+	
 	for(int i = 0; i< n.size(); i++)
 	{
 		bool already_edge = true;
@@ -219,7 +410,7 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 	}
 	
 
-	if(!SINGLE_THREAD)
+	if(!SINGLE_THREAD && check)
 	{
 		int i = 0;
 		while( i< addAble.size())
@@ -266,9 +457,12 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 			{
 				if(threads.at(j) != nullptr && threads.at(j)->joinable())
 				{
-					threads.at(j)->join();
-					delete threads.at(j);
-					threads.at(j) = nullptr;
+					//if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
+					//{
+						threads.at(j)->join();
+						delete threads.at(j);
+						threads.at(j) = nullptr;
+					//}
 				}
 
 			}
@@ -285,9 +479,12 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 				{
 					if(threads.at(j) != nullptr && threads.at(j)->joinable())
 					{
-						threads.at(j)->join();
-						delete threads.at(j);
-						threads.at(j) = nullptr;
+						//if(threads.at(j)->try_join_for(boost::chrono::milliseconds(1)))
+						//{
+							threads.at(j)->join();
+							delete threads.at(j);
+							threads.at(j) = nullptr;
+						//}
 					}
 				}
 
@@ -436,15 +633,22 @@ void Roadmap::initWorkCell()
 	_workcell3 = rw::loaders::WorkCellLoader::Factory::load(path);
 	_workcell4 = rw::loaders::WorkCellLoader::Factory::load(path);
 
+	std::string path2 = ros::package::getPath("rovi2") + "/WorkStation_astar/WC3_Scene.wc.xml";
+	_workcellAstar = rw::loaders::WorkCellLoader::Factory::load(path2);
+
 	_device1 = _workcell1->findDevice("UR1");
 	_device2 = _workcell2->findDevice("UR1");
 	_device3 = _workcell3->findDevice("UR1");
 	_device4 = _workcell4->findDevice("UR1");
 
+	_deviceAstar = _workcellAstar->findDevice("UR1");
+
 	_state1 =  _workcell1->getDefaultState();
 	_state2 =  _workcell1->getDefaultState();
 	_state3 =  _workcell1->getDefaultState();
 	_state4 =  _workcell1->getDefaultState();
+	
+	_stateAstar = _workcellAstar->getDefaultState();
 
 
 	// Create Graph
@@ -468,6 +672,7 @@ void Roadmap::initRobworkStuff()
 	_strategy2 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	_strategy3 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	_strategy4 = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
+	_strategyAstar = rwlibs::proximitystrategies::ProximityStrategyPQP::make();
 	if(_strategy1 == NULL)
 		ROS_ERROR("Strategy error");
 
@@ -477,6 +682,7 @@ void Roadmap::initRobworkStuff()
 	_detector2 = new rw::proximity::CollisionDetector(_workcell2, _strategy1);
 	_detector3 = new rw::proximity::CollisionDetector(_workcell3, _strategy1);
 	_detector4 = new rw::proximity::CollisionDetector(_workcell4, _strategy1);
+	_detectorAstar = new rw::proximity::CollisionDetector(_workcellAstar, _strategyAstar);
 	if(_detector1 == NULL)
 		ROS_ERROR("Detector error");
 
@@ -485,6 +691,7 @@ void Roadmap::initRobworkStuff()
 	_constraint2 = rw::pathplanning::QConstraint::make(_detector2, _device2, _state2);
 	_constraint3 = rw::pathplanning::QConstraint::make(_detector3, _device3, _state3);
 	_constraint4 = rw::pathplanning::QConstraint::make(_detector4, _device4, _state4);
+	_constraintAstar = rw::pathplanning::QConstraint::make(_detectorAstar, _deviceAstar, _stateAstar);
 
 	// EdgeConstraint, to check for collision in an edge
 	_edgeConstraint1 = rw::pathplanning::QEdgeConstraint::make(
@@ -499,6 +706,9 @@ void Roadmap::initRobworkStuff()
 	_edgeConstraint4 = rw::pathplanning::QEdgeConstraint::make(
             _constraint4, rw::math::MetricFactory::makeEuclidean<rw::math::Q>(), _resolution);
 
+	_edgeConstraintAstar = rw::pathplanning::QEdgeConstraint::make(
+            _constraintAstar, rw::math::MetricFactory::makeEuclidean<rw::math::Q>(), _resolution);
+
 	// Make a uniform sampler, which only returns collision free samples for both bounds and workcell
 	// We might not want a constrained sampler, if we wants to use our own bounds, alternative we can change the robots bounds!
 	_sampler = rw::pathplanning::QSampler::makeConstrained(rw::pathplanning::QSampler::makeUniform(_device1),_constraint1);
@@ -510,14 +720,19 @@ void Roadmap::initRobworkStuff()
 
 	// Create the metric
 	_metric = rw::math::MetricFactory::makeWeightedEuclidean<rw::math::Q>(_metricWeights);
-
+	//_metric = rw::math::MetricFactory::makeEuclidean<rw::math::Q>();
+	
 	std::stringstream buffer;
 	buffer << "Bounds +/- " << (_device1->getBounds().second)[0] << std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
 
-
+	//_metricWeights = rw::math::Q(6,1,1,1,1,1,1);
 
 	_radi = _metricWeights;
+
+	std::stringstream buffer3;
+	buffer3 << "Weights " << _metricWeights << std::endl;
+	ROS_INFO("%s", buffer3.str().c_str());
 
         for(size_t i=0;i<_radi.size();i++){
             _radi[i] = _connection_radius/std::max(_metricWeights(i),0.1);
@@ -735,7 +950,7 @@ void Roadmap::load_roadmap(std::string path)
 				c.push_back(std::atof(strs.at(i+1).c_str()));
 			}
 			
-
+			
 			addEdges(t, _graph->at(std::atoi(strs.at(0).c_str())), false, c);			
 
 		}
@@ -751,9 +966,10 @@ int main(int argc, char **argv)
   time_t start, end;
 
   time(&start);
-  ros::init(argc,argv,"roadmap68");
+
+  ros::init(argc,argv,"roadmap31");
   ros::NodeHandle n;
-  Roadmap Roadmap_ros(3000000, 0.01, 0.25, 0.15);
+  /*Roadmap Roadmap_ros(n, 1000, 0.01, 2.5, 0.7);
   if(Roadmap_ros.create_roadmap())
   {
 	std::stringstream buffer;
@@ -764,7 +980,8 @@ int main(int argc, char **argv)
 	ROS_INFO("Could not create Roadmap!");
   
   Roadmap_ros.connectedComponents();
-  Roadmap_ros.save_roadmap("Roadmap_3000000_0p01_0p25_0p15_correct.txt");
+  Roadmap_ros.save_roadmap("Roadmap_1000_0p01_2p5_0p7_connected.txt");
+
  
   time(&end);
   double dif = difftime(end, start);
@@ -778,14 +995,14 @@ int main(int argc, char **argv)
 
 
 
-  /*
-   Roadmap Roadmap_ros("test5.txt");
+  */
+   Roadmap Roadmap_ros(n, "Roadmap_1000_0p01_2p0_0p7_connected.txt");
    std::stringstream buffer;
 	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" <<     std::endl;
 	ROS_INFO("%s", buffer.str().c_str());
    Roadmap_ros.connectedComponents();
 
-*/
+
 
 
 

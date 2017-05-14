@@ -52,6 +52,9 @@ if (SHOULD_BUILD)
   add_service_files(
     FILES
     MovePtp.srv
+    Plan.srv
+    Movexyz.srv
+    Conf.srv
     )
 
 	add_message_files(
@@ -60,6 +63,9 @@ if (SHOULD_BUILD)
 	  State.msg
     position2D.msg
     position3D.msg
+    velocityXYZ.msg
+	xyz.msg
+	path.msg
 	)
 
   generate_messages(
@@ -112,10 +118,21 @@ if (SHOULD_BUILD)
   add_dependencies(image_converter sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
 
   #find_package( OpenCV REQUIRED ) # Required below
+  # Print some message showing some of them
+  #message(STATUS "OpenCV library status:")
+  #message(STATUS "    version: ${OpenCV_VERSION}")
+  #message(STATUS "    libraries: ${OpenCV_LIBS}")
+  #message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
   add_executable(ball_locator_3d src/ball_locator_3d.cpp src/ColorDetector.cpp)
   #target_link_libraries(ball_locator_3d ${catkin_LIBRARIES} ${OpenCV_LIBS} )
   target_link_libraries(ball_locator_3d ${catkin_LIBRARIES} )
   add_dependencies(ball_locator_3d sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
+
+  add_executable(ball_locator_3d_eye_hand_logging src/ball_locator_3d_eye_hand_logging.cpp src/ColorDetector.cpp)
+  #target_link_libraries(ball_locator_3d_eye_hand_logging ${catkin_LIBRARIES} ${OpenCV_LIBS} )
+  target_link_libraries(ball_locator_3d_eye_hand_logging ${catkin_LIBRARIES} )
+  add_dependencies(ball_locator_3d_eye_hand_logging sensor_msgs cv_bridge roscpp std_msgs image_transport opencv rovi2_generate_messages_cpp)
+
 
   #add_executable(camera3D src/camera3D.cpp src/Stereopsis.cpp)
   #target_link_libraries(camera3D ${catkin_LIBRARIES} ${OpenCV_LIBS))
@@ -141,6 +158,48 @@ if (SHOULD_BUILD)
   set(StudioPlugin_src src/StudioPlugin.cpp)
   add_library(StudioPlugin MODULE ${StudioPlugin_src} ${UIS_OUT_H} ${MocSrcFiles} ${RccSrcFiles})
   target_link_libraries(StudioPlugin ${ROBWORK_LIBRARIES} ${ROBWORKSTUDIO_LIBRARY_DIRS} ${catkin_LIBRARIES})
+
+  include_directories(vision_test
+    include 
+    ${ROBWORK_INCLUDE_DIR}
+    ${ROBWORKHARDWARE_INCLUDE_DIRS}
+    ${ROBWORKSTUDIO_INCLUDE_DIRS}
+    ${catkin_INCLUDE_DIRS}
+    )
+  add_executable(vision_test src/vision_test_node.cpp src/vision_test.cpp)
+  target_link_libraries(vision_test
+    ${catkin_LIBRARIES}
+    ${ROBWORK_LIBRARIES}
+    ${ROBWORKHARDWARE_LIBRARIES}
+    ${ROBWORKSTUDIO_LIBRARY_DIRS}
+    ${catkin_LIBRARIES}
+    )
+  add_dependencies(vision_test std_msgs roscpp rovi2_generate_messages_cpp)
+
+  include_directories(vision_test_move_robot
+    include
+    ${ROBWORK_INCLUDE_DIR}
+    ${ROBWORKHARDWARE_INCLUDE_DIRS}
+    ${ROBWORKSTUDIO_INCLUDE_DIRS}
+    ${catkin_INCLUDE_DIRS}
+    )
+  add_executable(vision_test_move_robot src/vision_test_move_robot.cpp)
+  target_link_libraries(vision_test_move_robot
+      ${catkin_LIBRARIES}
+      ${ROBWORK_LIBRARIES}
+      ${ROBWORKHARDWARE_LIBRARIES}
+      ${ROBWORKSTUDIO_LIBRARY_DIRS})
+  add_dependencies(vision_test_move_robot std_msgs rovi2_generate_messages_cpp)
+
+  add_executable(Application src/Application.cpp)
+  target_link_libraries(Application ${ROBWORK_LIBRARIES} ${catkin_LIBRARIES} )
+  add_dependencies(Application std_msgs rovi2_generate_messages_cpp)
+
+
+
+
+
+
 
 catkin_package()
 

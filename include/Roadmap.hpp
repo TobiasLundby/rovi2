@@ -7,6 +7,10 @@
 #include <rw/models/Device.hpp>
 #include <rw/rw.hpp>
 #include <rw/math/Q.hpp>
+#include "rovi2/Q.h"
+#include "rovi2/Plan.h"
+#include "rovi2/path.h"
+#include "rovi2/Conf.h"
 //#include <rw/math/QMetric.hpp>
 #include <rwlibs/proximitystrategies/ProximityStrategyPQP.hpp>
 #include <rw/pathplanning/PlannerConstraint.hpp>
@@ -35,8 +39,7 @@ class Node
 {
 public:
  	Node(rw::math::Q p, int nodeid){ q_val = p; edges = std::vector<Node*>(0); edge_cost = std::vector<double>(0); nodenum = nodeid;}
-	~Node();
-	 
+	~Node(){}	 
 
 	rw::math::Q q_val;
 	std::vector<Node*> edges;
@@ -60,13 +63,17 @@ class Roadmap
 {
 public:
 
-	Roadmap(int size, double resolution, double connection_radius, double max_density); 
-	Roadmap(std::string path);
+	Roadmap(ros::NodeHandle h, int size, double resolution, double connection_radius, double max_density); 
+	Roadmap(ros::NodeHandle h,std::string path);
 
 	virtual ~Roadmap();
 
         bool create_roadmap();
         void save_roadmap(std::string path);
+
+
+	rw::math::Q toRw(const rovi2::Q& q);
+	rovi2::Q toRos(const rw::math::Q& q);
 
 
 	
@@ -80,6 +87,10 @@ public:
 	void distance_to_goal(rw::math::Q init, rw::math::Q goal);
 
 	void connectedComponents();
+
+
+	bool start_plan(rovi2::Plan::Request & request, rovi2::Plan::Response &res);
+	bool check_plan(rovi2::Conf::Request & request, rovi2::Conf::Response &res);
 	 
  
 
@@ -89,6 +100,8 @@ public:
 protected:
 	void initWorkCell();
 	void initRobworkStuff();
+
+	
 
 	// Find connection node for init and goal from a Q position
 	Node* find_connection_node(rw::math::Q);
@@ -104,12 +117,14 @@ protected:
 
 	// These are not checked for collision!
 	void addNode(rw::math::Q n, int nodeid, bool c, bool u);
+	void addNode(rw::math::Q n, int nodeid);
 	void addEdges(int nodeidA, int nodeidB);
 
 	// Add a new samples node
 	bool addNode();
 
 	std::vector<Node*> nodesInRange(Node *a); 
+	int nodesInRange(rw::math::Q a);
 	void addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<double> _cost = std::vector<double>(0));
 	void connectGraph();
 
@@ -132,37 +147,43 @@ public:
   	rw::models::WorkCell::Ptr _workcell2 = nullptr;
   	rw::models::WorkCell::Ptr _workcell3 = nullptr;
   	rw::models::WorkCell::Ptr _workcell4 = nullptr;
+	rw::models::WorkCell::Ptr _workcellAstar = nullptr;
 	rw::kinematics::State _state1;
 	rw::kinematics::State _state2;
 	rw::kinematics::State _state3;
 	rw::kinematics::State _state4;
+	rw::kinematics::State _stateAstar;
   	rw::models::Device::Ptr _device1;
   	rw::models::Device::Ptr _device2;
   	rw::models::Device::Ptr _device3;
   	rw::models::Device::Ptr _device4;
+	rw::models::Device::Ptr _deviceAstar;
 	rw::proximity::CollisionDetector::Ptr _detector1;
 	rw::proximity::CollisionDetector::Ptr _detector2;
 	rw::proximity::CollisionDetector::Ptr _detector3;
 	rw::proximity::CollisionDetector::Ptr _detector4;
+	rw::proximity::CollisionDetector::Ptr _detectorAstar;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint1;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint2;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint3;
 	rw::common::Ptr<rw::pathplanning::QConstraint> _constraint4;
+	rw::common::Ptr<rw::pathplanning::QConstraint> _constraintAstar;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint1;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint2;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint3;
 	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraint4;
+	rw::common::Ptr<rw::pathplanning::QEdgeConstraint> _edgeConstraintAstar;
 	rw::proximity::CollisionStrategy::Ptr _strategy1;
 	rw::proximity::CollisionStrategy::Ptr _strategy2;
 	rw::proximity::CollisionStrategy::Ptr _strategy3;
 	rw::proximity::CollisionStrategy::Ptr _strategy4;
+	rw::proximity::CollisionStrategy::Ptr _strategyAstar;
 	rw::pathplanning::QSampler::Ptr _sampler;
 	rw::math::Q _metricWeights;
-	rw::math::QMetric::Ptr _metric;
+	rw::math::QMetric::Ptr _metric = nullptr;
 	rw::math::Q _radi;
 	rw::math::Q _radi2;
 
-	Astar *_astar;
 
 	// KdTree for nearest neighbor search.
         rwlibs::algorithms::KDTreeQ<Node*>::Ptr  _kdtree;
@@ -186,7 +207,16 @@ public:
 	int t4Usage = 0;
 
 	boost::mutex push_lock;
+	//boost::mutex astar_lock;
+	//bool astar_running = false;
+	Astar *planner = nullptr;
+	boost::thread* astar_thread = nullptr;
 	std::vector<boost::thread*> threads;
+
+	ros::ServiceServer service_start_plan;
+	ros::ServiceServer service_next_conf;
+	ros::Publisher path_publisher;
+	ros::NodeHandle _nodehandle;
 	
 
 };

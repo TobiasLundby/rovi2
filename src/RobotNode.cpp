@@ -4,6 +4,7 @@
 
 
 
+
 RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 {
 
@@ -12,6 +13,8 @@ RobotNode_ros::RobotNode_ros(ros::NodeHandle h)
 	RobotNode_ros::initWorkCell();
 	RobotNode_ros::initDevice();
 	service_nonlinear = _nodehandle.advertiseService("rovi2/robot_node/Move_nonlinear_ptp", &RobotNode_ros::Move_nonlinear_ptp, this);
+	service_servo = _nodehandle.advertiseService("rovi2/robot_node/Move_servo_ptp", &RobotNode_ros::Move_servo_ptp, this);
+	service_inverse = _nodehandle.advertiseService("rovi2/robot_node/MoveXYZ", &RobotNode_ros::Move_xyz, this);
         state_updater = _nodehandle.advertise<rovi2::State>("rovi2/robot_node/Robot_state", 1);
 };
 
@@ -58,6 +61,10 @@ void RobotNode_ros::initWorkCell()
 
 	_state =  _workcell->getDefaultState();
 
+	_BallErrorFrame = _workcell->findFrame("WSG50.BallError");
+
+	_solver = new rw::invkin::JacobianIKSolver(_device, _BallErrorFrame, _state);
+
 
 };
 
@@ -102,7 +109,7 @@ rw::math::Q RobotNode_ros::getQ()
 
 void RobotNode_ros::StatePublisher()
 {
-	ros::Rate loop_rate(100);
+	ros::Rate loop_rate(10);
 
 	while(ros::ok())
 	{
@@ -123,7 +130,7 @@ void RobotNode_ros::StatePublisher()
 			current_state.q = RobotNode_ros::toRos(urrt_data.qActual);
 			current_state.dq = RobotNode_ros::toRos(urrt_data.dqActual);
 			bool is_moving = false;
-			for(int i = 0; i< 6; i++)
+			for(int i = 0; i< 5; i++)
 			{
 				if(fabs(urrt_data.dqActual[i]) > 0.0001)
 				{
@@ -150,9 +157,47 @@ bool RobotNode_ros::Move_nonlinear_ptp(rovi2::MovePtp::Request & request, rovi2:
 {
 	//TODO check for bounds!
 	rw::math::Q newQ = RobotNode_ros::toRw(request.target);
+	_device->setQ(newQ, _state);
 	_ur->moveQ(newQ, 1.0);
 	res.success = true;
 
 	return true;
 	
 }
+
+bool RobotNode_ros::Move_servo_ptp(rovi2::MovePtp::Request & request, rovi2::MovePtp::Response &res)
+{
+	//TODO check for bounds!
+	rw::math::Q newQ = RobotNode_ros::toRw(request.target);
+	_device->setQ(newQ, _state);
+	_ur->servo(newQ);
+	res.success = true;
+
+	return true;
+	
+}
+
+bool RobotNode_ros::Move_xyz(rovi2::Movexyz::Request &request, rovi2::Movexyz::Response &res)
+{
+	rw::math::Transform3D<double> newT(rw::math::Vector3D<double>(request.target.data[0], request.target.data[1], request.target.data[2]), rw::math::RPY<double>(request.target.data[3], request.target.data[4], request.target.data[5]).toRotation3D()); 
+	std::vector<rw::math::Q> qVec = _solver->solve(newT, _state);
+	res.success = false;
+	
+	if(qVec.size() != 0 and qVec[0].size() >1)
+	{
+		_ur->moveQ(qVec[0], 1.0);
+		_device->setQ(qVec[0], _state);
+		res.success = true;
+		
+	}
+
+
+
+}
+
+
+
+
+
+
+

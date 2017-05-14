@@ -1,0 +1,91 @@
+<WorkCell name="SceneUR">
+
+<Frame name="Foot" refframe="WORLD" type="Movable">  
+	<RPY> 0 0 0 </RPY> <Pos> 0 0 0.031 </Pos>
+	<Drawable name="EnvGeo" refframe="Env">
+          <Polytope file="Geometry/foot" />
+     </Drawable>
+ </Frame>
+
+ <Frame name="Robot" refframe="Foot">
+    <RPY> -90 0 0 </RPY> <Pos>0 0.0 0.780</Pos>
+ </Frame>
+ <Include file="UR/UR.wc.xml" />
+
+
+
+ <Frame name="TempCam" refframe="WORLD">
+  <RPY> -90 0 -119 </RPY> <Pos> -1.9 0 2.3 </Pos>
+  </Frame>
+
+  <Frame name="LargeGripper" refframe="UR1.TCP">
+    <RPY> 0 0 0 </RPY> <Pos> 0 0 0.001 </Pos>
+    <Drawable name="LGripperGeo" refframe="LargeGripper">
+     <RPY> 0 0 0 </RPY> <Pos> 0 0 0 </Pos>
+     <Polytope file="Geometry/large_gripper" />
+    </Drawable>
+   </Frame> 
+
+  <Frame name="Ball" refframe="Robot" type="Movable">
+    <RPY> 0 0 0 </RPY> <Pos> 0 -1.5 1 </Pos>
+    <Drawable name="BallGeo" refframe="Ball">
+     <RPY> 0 0 0 </RPY> <Pos> 0 0 0 </Pos>
+     <Polytope file="Geometry/Red_ball" />
+    </Drawable>
+   </Frame> 
+
+ <Frame name="WorkPiece" refframe="WORLD">  
+ <RPY>0 0 0.02 </RPY> <Pos> -0.09 -0.770 1.072 </Pos>
+ </Frame>
+
+  <Frame name="WPtable" refframe="WORLD" type="Movable">
+      <RPY> 0.0 0 0 </RPY> <Pos> -0.605 -0.086 1.110 </Pos>
+     <Drawable name="WPtablegeo" refframe="WPtable" >
+   <RPY> 0.0 0 0 </RPY> <Pos> -0.51 -0.65 -1.03</Pos>
+   <Polytope file="Geometry/WPtable" />
+  </Drawable>
+  </Frame>
+
+ <Frame name="Wall1" refframe="WORLD">
+      <RPY> 0 0 0 </RPY> <Pos> -2.09 0.86 0 </Pos>
+     <Drawable name="Fencegeo1" refframe="left" >
+   <RPY> 0 0 0 </RPY> <Pos> 0 0 0</Pos>
+   <Polytope file="Geometry/wall1" />
+  </Drawable>
+  </Frame>
+  
+   <Frame name="Wall2" refframe="WORLD">
+      <RPY> 0 0 0 </RPY> <Pos> -2.09 -0.795 0 </Pos>
+     <Drawable name="Fencegeo2" refframe="right" >
+   <RPY> 0 0 0 </RPY> <Pos> 0 -0.05 0</Pos>
+   <Polytope file="Geometry/wall2" />
+  </Drawable>
+  </Frame>
+  
+   <Frame name="Wall3" refframe="WORLD">
+      <RPY> 90 0 0 </RPY> <Pos> 0.815 -0.85 0 </Pos>
+     <Drawable name="Fencegeo3" refframe="back" >
+   <RPY> 0 0 0 </RPY> <Pos> 0 -0.05 0</Pos>
+   <Polytope file="Geometry/wall3" />
+  </Drawable>
+  </Frame>
+
+   <Frame name="VisionBox_near" refframe="Wall2" type="Movable">
+      <RPY> 0 0 0 </RPY> <Pos>1.525 0.16 1.5</Pos>
+     <Drawable name="visBox" refframe="back" >
+   <RPY> 0 0 0 </RPY> <Pos>0 -0.13 0</Pos>
+   <Polytope file="Geometry/VisionBox.stl" />
+  </Drawable>
+  </Frame>
+
+   <Frame name="VisionBox_far" refframe="Wall3" type="Movable">
+      <RPY> 0 0 0 </RPY> <Pos>0.250 0.052 2.062</Pos>
+     <Drawable name="visBox" refframe="back" >
+   <RPY> 0 0 0 </RPY> <Pos>0 0 0</Pos>
+   <Polytope file="Geometry/VisionBox.stl" />
+  </Drawable>
+  </Frame>
+
+<CollisionSetup file="CollisionSetup.xml"/>
+
+</WorkCell>
