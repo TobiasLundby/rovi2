@@ -98,7 +98,6 @@ void vision_test::predicted_callback(const rovi2::position3D &msg)
   file << xy_left_position.y << "\t";
   file << xy_right_position.x << "\t";
   file << xy_right_position.y << "\t";
-
   file << std::endl;
   file.close();
 

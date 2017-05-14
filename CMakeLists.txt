@@ -170,8 +170,19 @@ if (SHOULD_BUILD)
     )
   add_dependencies(vision_test std_msgs roscpp rovi2_generate_messages_cpp)
 
+  include_directories(vision_test_move_robot
+    include
+    ${ROBWORK_INCLUDE_DIR}
+    ${ROBWORKHARDWARE_INCLUDE_DIRS}
+    ${ROBWORKSTUDIO_INCLUDE_DIRS}
+    ${catkin_INCLUDE_DIRS}
+    )
   add_executable(vision_test_move_robot src/vision_test_move_robot.cpp)
-  target_link_libraries(vision_test_move_robot ${catkin_LIBRARIES} )
+  target_link_libraries(vision_test_move_robot
+      ${catkin_LIBRARIES}
+      ${ROBWORK_LIBRARIES}
+      ${ROBWORKHARDWARE_LIBRARIES}
+      ${ROBWORKSTUDIO_LIBRARY_DIRS})
   add_dependencies(vision_test_move_robot std_msgs rovi2_generate_messages_cpp)
 
   add_executable(Application src/Application.cpp)
