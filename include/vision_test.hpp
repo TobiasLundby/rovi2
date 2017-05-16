@@ -6,6 +6,7 @@
 #include "rovi2/position3D.h"
 #include "rovi2/Q.h"
 #include "rovi2/position2D.h"
+#include "rovi2/velocityXYZ.h"
 
 // Robwork
 #include <rw/rw.hpp>
@@ -43,6 +44,7 @@ private:
   ros::Subscriber subscribe_predicted;
   ros::Subscriber subscribe_xy_left;
   ros::Subscriber subscribe_xy_right;
+  ros::Subscriber subscribe_velocity;
 
   // Subscriber callbacks
   void robot_status_callback(const rovi2::State &msg);
@@ -51,6 +53,7 @@ private:
   void predicted_callback(const rovi2::position3D &msg);
   void xy_left_callback(const rovi2::position2D &msg);
   void xy_right_callback(const rovi2::position2D &msg);
+  void velocity_callback(const rovi2::velocityXYZ &msg);
 
   // Attributes
   rovi2::State robot_state;
@@ -58,6 +61,7 @@ private:
   rovi2::position3D triangulated_pos;
   rovi2::position2D xy_left_position;
   rovi2::position2D xy_right_position;
+  rovi2::velocityXYZ velocity;
 
 
   // Robwork stuff

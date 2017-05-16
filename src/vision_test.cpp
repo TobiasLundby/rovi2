@@ -9,6 +9,7 @@ vision_test::vision_test(ros::NodeHandle n)
   subscribe_predicted = nh.subscribe("/ball_locator_3d/kalman_prediction",0,&vision_test::predicted_callback,this);
   subscribe_xy_left = nh.subscribe("/ball_locator_3d/pos_left",0,&vision_test::xy_left_callback,this);
   subscribe_xy_right = nh.subscribe("/ball_locator_3d/pos_right",0,&vision_test::xy_right_callback,this);
+  subscribe_velocity = nh.subscribe("/ball_locator_3d/velocity",0,&vision_test::velocity_callback,this);
 
   _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
   _device = _workcell->findDevice("UR1");
@@ -60,12 +61,22 @@ void vision_test::xy_right_callback(const rovi2::position2D &msg)
   xy_right_position = msg;
 }
 
+void vision_test::velocity_callback(const rovi2::velocityXYZ &msg)
+{
+  velocity = msg;
+}
+
 void vision_test::predicted_callback(const rovi2::position3D &msg)
 {
-  // Convert ros q to rw q, set state and conver to cartesian space (forward kinematics)
-  rw::math::Q q = toRw(robot_state.q);
-  _device->setQ(q,_state);
-  rw::math::Vector3D<double> robot_p = robot_base->fTf(TCP_marker,_state).P();
+  bool log_robot = false;
+  rw::math::Vector3D<double> robot_p(0,0,0);
+  if(log_robot)
+  {
+    //Convert ros q to rw q, set state and conver to cartesian space (forward kinematics)
+    rw::math::Q q = toRw(robot_state.q);
+    _device->setQ(q,_state);
+    robot_p = robot_base->fTf(TCP_marker,_state).P();
+  }
 
   // Transformation matrices
   rw::math::Vector3D<double> transP(-0.116075, -1.67057, 1.33754);
@@ -98,6 +109,10 @@ void vision_test::predicted_callback(const rovi2::position3D &msg)
   file << xy_left_position.y << "\t";
   file << xy_right_position.x << "\t";
   file << xy_right_position.y << "\t";
+  file << velocity.x_dot << "\t";
+  file << velocity.y_dot << "\t";
+  file << velocity.z_dot << "\t";
+  file << velocity.p_dot << "\t";
   file << std::endl;
   file.close();
 
