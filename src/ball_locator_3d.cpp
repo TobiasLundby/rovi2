@@ -34,6 +34,8 @@
 #define OUTPUT_RECT_AND_UNDIST_POINT false
 #define CAM_FREQ 10
 
+#define kalman_order2 true
+
 rovi2::position2D msg_undist_left;
 rovi2::position2D msg_undist_right;
 ros::Publisher position_pub_left;
@@ -444,12 +446,20 @@ void callback(
             msg_velocity.z_dot = estimated.at<float>(5);
             msg_velocity.p_dot = sqrt(pow(estimated.at<float>(3),2)+pow(estimated.at<float>(4),2)+pow(estimated.at<float>(5),2));
             position_velocity.publish(msg_velocity); // Publish it
-            // Save to file
+
+            ROS_ERROR("Pos:\t%f \t%f \t%f \n", estimated.at<float>(0), estimated.at<float>(1), estimated.at<float>(2));
+            ROS_ERROR("Vel:\t%f \t%f \t%f \n", estimated.at<float>(3), estimated.at<float>(4), estimated.at<float>(5));
+            ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
+
+            // Save image
             if(false)
             {
-                std::string calib_path = "/home/mathias/Desktop/image_log"; // This is also used for saving the images
+                // Save to file
+                //std::string calib_path = "/home/mathias/Desktop/image_log"; // This is also used for saving the images
+                std::string calib_path = "/home/tobiaslundby/Desktop/image_log"; // This is also used for saving the images
                 std::ofstream file;
                 file.open(calib_path+"/velocities.log",std::ios::app);
+                file << image_number << "\t";
                 file << (float)triangluated_point.at(0) << "\t";
                 file << (float)triangluated_point.at(1) << "\t";
                 file << (float)triangluated_point.at(2) << "\t";
@@ -574,7 +584,8 @@ int main(int argc, char** argv)
 
     // NOTE: Kalman filter
     float delta_t = 1.0/CAM_FREQ;
-    KalmanFilter KF(9, 3, 0);
+    KalmanFilter KF;
+    KF.init(9, 3, 0);
     // intialization of KF...
     KF.transitionMatrix = (Mat_<float>(9, 9) <<
     1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
