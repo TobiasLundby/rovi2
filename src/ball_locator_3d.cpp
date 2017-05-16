@@ -34,7 +34,7 @@
 #define OUTPUT_RECT_AND_UNDIST_POINT false
 #define CAM_FREQ 10
 
-#define kalman_order2 true
+#define kalman_order2 true /*True = order 2 and false = order 1*/
 
 rovi2::position2D msg_undist_left;
 rovi2::position2D msg_undist_right;
@@ -449,7 +449,8 @@ void callback(
 
             ROS_ERROR("Pos:\t%f \t%f \t%f \n", estimated.at<float>(0), estimated.at<float>(1), estimated.at<float>(2));
             ROS_ERROR("Vel:\t%f \t%f \t%f \n", estimated.at<float>(3), estimated.at<float>(4), estimated.at<float>(5));
-            ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
+            if (kalman_order2 or true)
+                ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
 
             // Save image
             if(false)
@@ -585,36 +586,64 @@ int main(int argc, char** argv)
     // NOTE: Kalman filter
     float delta_t = 1.0/CAM_FREQ;
     KalmanFilter KF;
-    KF.init(9, 3, 0);
-    // intialization of KF...
-    KF.transitionMatrix = (Mat_<float>(9, 9) <<
-    1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
-    0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,
-    0,0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),
-    0,0,0,delta_t,0,0,1,0,0,
-    0,0,0,0,delta_t,0,0,1,0,
-    0,0,0,0,0,delta_t,0,0,1,
-    0,0,0,0,0,0,1,0,0,
-    0,0,0,0,0,0,0,1,0,
-    0,0,0,0,0,0,0,0,1);
-    //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
-    KF.statePre.at<float>(0) = 0; //x
-    KF.statePre.at<float>(1) = 0; //y
-    KF.statePre.at<float>(2) = 1.20; //z
-    KF.statePre.at<float>(3) = 0; //xdot
-    KF.statePre.at<float>(4) = 0; //ydot
-    KF.statePre.at<float>(5) = 0; //zdot
-    KF.statePre.at<float>(6) = 0; //xdotdot
-    KF.statePre.at<float>(7) = 0; //ydotdot
-    KF.statePre.at<float>(8) = 0; //zdotdot
-    // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
-    setIdentity(KF.measurementMatrix);
-    /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
-    setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
-    /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
-    setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
-    /* Initial error */
-    setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+    if (kalman_order2) {
+        KF.init(9, 3, 0);
+        // intialization of KF...
+        KF.transitionMatrix = (Mat_<float>(9, 9) <<
+        1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
+        0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,
+        0,0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),
+        0,0,0,delta_t,0,0,1,0,0,
+        0,0,0,0,delta_t,0,0,1,0,
+        0,0,0,0,0,delta_t,0,0,1,
+        0,0,0,0,0,0,1,0,0,
+        0,0,0,0,0,0,0,1,0,
+        0,0,0,0,0,0,0,0,1);
+        //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
+        KF.statePre.at<float>(0) = 0; //x
+        KF.statePre.at<float>(1) = 0; //y
+        KF.statePre.at<float>(2) = 1.20; //z
+        KF.statePre.at<float>(3) = 0; //xdot
+        KF.statePre.at<float>(4) = 0; //ydot
+        KF.statePre.at<float>(5) = 0; //zdot
+        KF.statePre.at<float>(6) = 0; //xdotdot
+        KF.statePre.at<float>(7) = 0; //ydotdot
+        KF.statePre.at<float>(8) = 0; //zdotdot
+        // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
+        setIdentity(KF.measurementMatrix);
+        /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
+        setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
+        /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
+        setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
+        /* Initial error */
+        setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+    } else {
+        KF.init(6, 3, 0);
+        // intialization of KF...
+        KF.transitionMatrix = (Mat_<float>(6,6) <<
+        1,0,0,delta_t,0,0,
+        0,1,0,0,delta_t,0,
+        0,0,1,0,0,delta_t,
+        0,0,0,1,0,0,
+        0,0,0,0,1,0,
+        0,0,0,0,0,1);
+        //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
+        KF.statePre.at<float>(0) = 0; //x
+        KF.statePre.at<float>(1) = 0; //y
+        KF.statePre.at<float>(2) = 1.20; //z
+        KF.statePre.at<float>(3) = 0; //xdot
+        KF.statePre.at<float>(4) = 0; //ydot
+        KF.statePre.at<float>(5) = 0; //zdot
+        // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
+        setIdentity(KF.measurementMatrix);
+        /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
+        setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
+        /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
+        setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
+        /* Initial error */
+        setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+    }
+
 
     // NOTE: Kalman publisher
     std::string kalman_estimate_str = node_name + "/kalman_estimate";

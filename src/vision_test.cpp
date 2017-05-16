@@ -11,7 +11,8 @@ vision_test::vision_test(ros::NodeHandle n)
   subscribe_xy_right = nh.subscribe("/ball_locator_3d/pos_right",0,&vision_test::xy_right_callback,this);
   subscribe_velocity = nh.subscribe("/ball_locator_3d/velocity",0,&vision_test::velocity_callback,this);
 
-  _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
+  //_workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
+  _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/tobiaslundby/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
   _device = _workcell->findDevice("UR1");
   _state =  _workcell->getDefaultState();
 
@@ -68,9 +69,9 @@ void vision_test::velocity_callback(const rovi2::velocityXYZ &msg)
 
 void vision_test::predicted_callback(const rovi2::position3D &msg)
 {
-  bool log_robot = false;
+  bool log_robot = true;
   rw::math::Vector3D<double> robot_p(0,0,0);
-  if(log_robot)
+  if(log_robot && robot_state.q.data.size() != 0)
   {
     //Convert ros q to rw q, set state and conver to cartesian space (forward kinematics)
     rw::math::Q q = toRw(robot_state.q);
