@@ -248,6 +248,7 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     dist_coeffs_l.at<double>(0,4) = -0.633893;
 
     Mat rectification_l = Mat::zeros(3,3,CV_64F);
+    // setIdentity(rectification_l);
     rectification_l.at<double>(0,0) =  0.999871;
     rectification_l.at<double>(0,1) =  0.004958;
     rectification_l.at<double>(0,2) = -0.015269;
@@ -288,6 +289,7 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     dist_coeffs_r.at<double>(0,4) = -0.828583;
 
     Mat rectification_r = Mat::zeros(3,3,CV_64F);
+    // setIdentity(rectification_r);
     rectification_r.at<double>(0,0) =  0.999671;
     rectification_r.at<double>(0,1) =  0.004195;
     rectification_r.at<double>(0,2) = -0.025319;
@@ -311,6 +313,32 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
 
     undistortPoints(left_point, left_point_undistorted, camera_matrix_l, dist_coeffs_l, rectification_l, camera_matrix_l);
     undistortPoints(right_point, right_point_undistorted, camera_matrix_r, dist_coeffs_r, rectification_r, camera_matrix_r);
+    //ROS_ERROR("Left: %f, %f", (float)left_point_undistorted.at<Vec2d>(0)[0], (float)left_point_undistorted.at<Vec2d>(0)[1]);
+    //ROS_ERROR("Right: %f, %f", (float)right_point_undistorted.at<Vec2d>(0)[0], (float)right_point_undistorted.at<Vec2d>(0)[1]);
+
+
+    cv::Mat E_m = cv::Mat::zeros(4,4,CV_64F);
+    E_m.at<double>(0,0) = 1.0e-0;
+    E_m.at<double>(1,1) = 1.0e-0;
+    E_m.at<double>(2,2) = 1.0e-0;
+    E_m.at<double>(3,3) = 1.0e-0;
+
+    cv::Point2f point_2D_left;
+    cv::Point2f point_2D_right;
+    point_2D_left.x = (float)left_point_undistorted.at<Vec2d>(0)[0];
+    point_2D_left.y = (float)left_point_undistorted.at<Vec2d>(0)[1];
+    point_2D_right.x = (float)right_point_undistorted.at<Vec2d>(0)[0];
+    point_2D_right.y = (float)right_point_undistorted.at<Vec2d>(0)[1];
+
+    std::stringstream buffer_left;
+    buffer_left <<  "Left" << point_2D_left.x <<  ", " << point_2D_left.y << std::endl << "Right: " << point_2D_right.x <<  ", " << point_2D_right.y << std::endl;
+    ROS_ERROR("%s", buffer_left.str().c_str());
+
+    cv::Mat E_M = propagate_error_2D_to_3D(E_m, point_2D_left, point_2D_right);
+    buffer_left <<  "Variance: x=" <<  E_M.at<float>(0,0) <<  " y=" << E_M.at<float>(1,1) << " z: " << E_M.at<float>(2,2) << std::endl;
+    ROS_ERROR("%s", buffer_left.str().c_str());
+    //ROS_ERROR("Variance: x=%f, \ty=%f, \tz=%f", E_M.at<float>(0,0), E_M.at<float>(1,1), E_M.at<float>(2,2));
+
 
 
     msg_undist_left.x = (float)left_point_undistorted.at<Vec2d>(0)[0];
@@ -447,10 +475,10 @@ void callback(
             msg_velocity.p_dot = sqrt(pow(estimated.at<float>(3),2)+pow(estimated.at<float>(4),2)+pow(estimated.at<float>(5),2));
             position_velocity.publish(msg_velocity); // Publish it
 
-            ROS_ERROR("Pos:\t%f \t%f \t%f \n", estimated.at<float>(0), estimated.at<float>(1), estimated.at<float>(2));
-            ROS_ERROR("Vel:\t%f \t%f \t%f \n", estimated.at<float>(3), estimated.at<float>(4), estimated.at<float>(5));
-            if (kalman_order2 or true)
-                ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
+            // ROS_ERROR("Pos:\t%f \t%f \t%f \n", estimated.at<float>(0), estimated.at<float>(1), estimated.at<float>(2));
+            // ROS_ERROR("Vel:\t%f \t%f \t%f \n", estimated.at<float>(3), estimated.at<float>(4), estimated.at<float>(5));
+            // if (kalman_order2)
+            //     ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
 
             // Save image
             if(false)
