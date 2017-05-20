@@ -34,6 +34,8 @@
 #define OUTPUT_RECT_AND_UNDIST_POINT false
 #define CAM_FREQ 10
 
+#define kalman_order2 true /*True = order 2 and false = order 1*/
+
 rovi2::position2D msg_undist_left;
 rovi2::position2D msg_undist_right;
 ros::Publisher position_pub_left;
@@ -246,6 +248,7 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     dist_coeffs_l.at<double>(0,4) = -0.633893;
 
     Mat rectification_l = Mat::zeros(3,3,CV_64F);
+    // setIdentity(rectification_l);
     rectification_l.at<double>(0,0) =  0.999871;
     rectification_l.at<double>(0,1) =  0.004958;
     rectification_l.at<double>(0,2) = -0.015269;
@@ -286,6 +289,7 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
     dist_coeffs_r.at<double>(0,4) = -0.828583;
 
     Mat rectification_r = Mat::zeros(3,3,CV_64F);
+    // setIdentity(rectification_r);
     rectification_r.at<double>(0,0) =  0.999671;
     rectification_r.at<double>(0,1) =  0.004195;
     rectification_r.at<double>(0,2) = -0.025319;
@@ -309,7 +313,30 @@ std::vector<float> calculate_3D_point(double left_x, double left_y, double right
 
     undistortPoints(left_point, left_point_undistorted, camera_matrix_l, dist_coeffs_l, rectification_l, camera_matrix_l);
     undistortPoints(right_point, right_point_undistorted, camera_matrix_r, dist_coeffs_r, rectification_r, camera_matrix_r);
+    //ROS_ERROR("Left: %f, %f", (float)left_point_undistorted.at<Vec2d>(0)[0], (float)left_point_undistorted.at<Vec2d>(0)[1]);
+    //ROS_ERROR("Right: %f, %f", (float)right_point_undistorted.at<Vec2d>(0)[0], (float)right_point_undistorted.at<Vec2d>(0)[1]);
 
+
+    cv::Mat E_m = cv::Mat::zeros(4,4,CV_64F);
+    E_m.at<double>(0,0) = 1.0e-0;
+    E_m.at<double>(1,1) = 1.0e-0;
+    E_m.at<double>(2,2) = 1.0e-0;
+    E_m.at<double>(3,3) = 1.0e-0;
+
+    cv::Point2f point_2D_left;
+    cv::Point2f point_2D_right;
+    point_2D_left.x = (float)left_point_undistorted.at<Vec2d>(0)[0];
+    point_2D_left.y = (float)left_point_undistorted.at<Vec2d>(0)[1];
+    point_2D_right.x = (float)right_point_undistorted.at<Vec2d>(0)[0];
+    point_2D_right.y = (float)right_point_undistorted.at<Vec2d>(0)[1];
+
+    // std::stringstream buffer_left;
+    // buffer_left <<  "Left" << point_2D_left.x <<  ", " << point_2D_left.y << std::endl << "Right: " << point_2D_right.x <<  ", " << point_2D_right.y << std::endl;
+    // ROS_ERROR("%s", buffer_left.str().c_str());
+    //
+    // cv::Mat E_M = propagate_error_2D_to_3D(E_m, point_2D_left, point_2D_right);
+    // buffer_left <<  "Variance: x=" <<  E_M.at<float>(0,0) <<  " y=" << E_M.at<float>(1,1) << " z: " << E_M.at<float>(2,2) << std::endl;
+    // ROS_ERROR("%s", buffer_left.str().c_str());
 
     msg_undist_left.x = (float)left_point_undistorted.at<Vec2d>(0)[0];
     msg_undist_left.y = (float)left_point_undistorted.at<Vec2d>(0)[1];
@@ -444,12 +471,21 @@ void callback(
             msg_velocity.z_dot = estimated.at<float>(5);
             msg_velocity.p_dot = sqrt(pow(estimated.at<float>(3),2)+pow(estimated.at<float>(4),2)+pow(estimated.at<float>(5),2));
             position_velocity.publish(msg_velocity); // Publish it
-            // Save to file
+
+            // ROS_ERROR("Pos:\t%f \t%f \t%f \n", estimated.at<float>(0), estimated.at<float>(1), estimated.at<float>(2));
+            // ROS_ERROR("Vel:\t%f \t%f \t%f \n", estimated.at<float>(3), estimated.at<float>(4), estimated.at<float>(5));
+            // if (kalman_order2)
+            //     ROS_ERROR("Acc:\t%f \t%f \t%f \n\n", estimated.at<float>(6), estimated.at<float>(7), estimated.at<float>(8));
+
+            // Save image
             if(false)
             {
-                std::string calib_path = "/home/mathias/Desktop/image_log"; // This is also used for saving the images
+                // Save to file
+                //std::string calib_path = "/home/mathias/Desktop/image_log"; // This is also used for saving the images
+                std::string calib_path = "/home/tobiaslundby/Desktop/image_log"; // This is also used for saving the images
                 std::ofstream file;
                 file.open(calib_path+"/velocities.log",std::ios::app);
+                file << image_number << "\t";
                 file << (float)triangluated_point.at(0) << "\t";
                 file << (float)triangluated_point.at(1) << "\t";
                 file << (float)triangluated_point.at(2) << "\t";
@@ -574,36 +610,105 @@ int main(int argc, char** argv)
 
     // NOTE: Kalman filter
     float delta_t = 1.0/CAM_FREQ;
-    KalmanFilter KF(9, 3, 0);
-    // intialization of KF...
-    KF.transitionMatrix = (Mat_<float>(9, 9) <<
-    1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,0,
-    0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),0,
-    0,0,1,0,0,delta_t,0,0,0.5*pow(delta_t,2),
-    0,0,0,delta_t,0,0,1,0,0,
-    0,0,0,0,delta_t,0,0,1,0,
-    0,0,0,0,0,delta_t,0,0,1,
-    0,0,0,0,0,0,1,0,0,
-    0,0,0,0,0,0,0,1,0,
-    0,0,0,0,0,0,0,0,1);
-    //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
-    KF.statePre.at<float>(0) = 0; //x
-    KF.statePre.at<float>(1) = 0; //y
-    KF.statePre.at<float>(2) = 1.20; //z
-    KF.statePre.at<float>(3) = 0; //xdot
-    KF.statePre.at<float>(4) = 0; //ydot
-    KF.statePre.at<float>(5) = 0; //zdot
-    KF.statePre.at<float>(6) = 0; //xdotdot
-    KF.statePre.at<float>(7) = 0; //ydotdot
-    KF.statePre.at<float>(8) = 0; //zdotdot
-    // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
-    setIdentity(KF.measurementMatrix);
-    /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
-    setIdentity(KF.processNoiseCov, Scalar::all(0.02)); // accuracy of prediction
-    /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
-    setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
-    /* Initial error */
-    setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+    KalmanFilter KF;
+    if (kalman_order2) {
+        KF.init(9, 3, 0);
+        // intialization of KF...
+        KF.transitionMatrix = (Mat_<float>(9, 9) <<
+        1,0,0,  delta_t,0,0,    0.5*pow(delta_t,2),0,0,
+        0,1,0,  0,delta_t,0,    0,0.5*pow(delta_t,2),0,
+        0,0,1,  0,0,delta_t,    0,0,0.5*pow(delta_t,2),
+        0,0,0,  delta_t,0,0,    1,0,0,
+        0,0,0,  0,delta_t,0,    0,1,0,
+        0,0,0,  0,0,delta_t,    0,0,1,
+        0,0,0,  0,0,0,          1,0,0,
+        0,0,0,  0,0,0,          0,1,0,
+        0,0,0,  0,0,0,          0,0,1);
+        //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
+        KF.statePre.at<float>(0) = 0; //x
+        KF.statePre.at<float>(1) = 0; //y
+        KF.statePre.at<float>(2) = 1.20; //z
+        KF.statePre.at<float>(3) = 0; //xdot
+        KF.statePre.at<float>(4) = 0; //ydot
+        KF.statePre.at<float>(5) = 0; //zdot
+        KF.statePre.at<float>(6) = 0; //xdotdot
+        KF.statePre.at<float>(7) = 0; //ydotdot
+        KF.statePre.at<float>(8) = 0; //zdotdot
+
+        KF.statePost.at<float>(0) = KF.statePre.at<float>(0); //x
+        KF.statePost.at<float>(1) = KF.statePre.at<float>(1); //y
+        KF.statePost.at<float>(2) = KF.statePre.at<float>(2); //z
+        KF.statePost.at<float>(3) = KF.statePre.at<float>(3); //xdot
+        KF.statePost.at<float>(4) = KF.statePre.at<float>(4); //ydot
+        KF.statePost.at<float>(5) = KF.statePre.at<float>(5); //zdot
+        KF.statePost.at<float>(6) = KF.statePre.at<float>(6); //zdotdot
+        KF.statePost.at<float>(7) = KF.statePre.at<float>(7); //zdotdot
+        KF.statePost.at<float>(8) = KF.statePre.at<float>(8); //zdotdot
+        // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY - also called the observation model.
+        setIdentity(KF.measurementMatrix);
+        /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
+        setIdentity(KF.processNoiseCov, Scalar::all(0.0025)); //the process can deviate with 5cm=0.05m -> 0.05m²=0.0025m²
+
+        /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
+        //setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
+        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-3; // note row and then column indexing
+        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-3;
+        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-3;
+        //ROS_ERROR("measurementNoiseCov\n %f \t%f \t%f \n %f \t%f \t%f \n %f \t%f \t%f \n", KF.measurementNoiseCov.at<float>(0,0),KF.measurementNoiseCov.at<float>(0,1),KF.measurementNoiseCov.at<float>(0,2),KF.measurementNoiseCov.at<float>(1,0),KF.measurementNoiseCov.at<float>(1,1),KF.measurementNoiseCov.at<float>(1,2),KF.measurementNoiseCov.at<float>(2,0),KF.measurementNoiseCov.at<float>(2,1),KF.measurementNoiseCov.at<float>(2,2));
+
+        /* Initial error */
+        setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value
+    } else {
+        KF.init(6, 3, 0);
+        // intialization of KF...
+        KF.transitionMatrix = (Mat_<float>(6,6) <<
+        1,0,0,  delta_t,0,0,
+        0,1,0,  0,delta_t,0,
+        0,0,1,  0,0,delta_t,
+        0,0,0,  1,0,0,
+        0,0,0,  0,1,0,
+        0,0,0,  0,0,1);
+        //Initial state - start pos estimate is (x,y,z)=(0,0,1.20)
+        KF.statePre.at<float>(0) = 0; //x
+        KF.statePre.at<float>(1) = 0; //y
+        KF.statePre.at<float>(2) = 1.20; //z
+        KF.statePre.at<float>(3) = 0; //xdot
+        KF.statePre.at<float>(4) = 0; //ydot
+        KF.statePre.at<float>(5) = 0; //zdot
+        KF.statePost.at<float>(0) = KF.statePre.at<float>(0); //x
+        KF.statePost.at<float>(1) = KF.statePre.at<float>(1); //y
+        KF.statePost.at<float>(2) = KF.statePre.at<float>(2); //z
+        KF.statePost.at<float>(3) = KF.statePre.at<float>(3); //xdot
+        KF.statePost.at<float>(4) = KF.statePre.at<float>(4); //ydot
+        KF.statePost.at<float>(5) = KF.statePre.at<float>(5); //zdot
+        // Set the matrices to identity - DOCUMENTED ELSEWHERE WHY
+        setIdentity(KF.measurementMatrix);
+        /* Process or state noise - w in x_(t+1)=Ax_t + w - error/noise in the model / prediction*/
+        setIdentity(KF.processNoiseCov, Scalar::all(0.0025)); //the process can deviate with 5cm=0.05m -> 0.05m²=0.0025m²
+
+        /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
+        //setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
+        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-3; // note row and then column indexing
+        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-3;
+        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-3;
+        //ROS_ERROR("measurementNoiseCov\n %f \t%f \t%f \n %f \t%f \t%f \n %f \t%f \t%f \n", KF.measurementNoiseCov.at<float>(0,0),KF.measurementNoiseCov.at<float>(0,1),KF.measurementNoiseCov.at<float>(0,2),KF.measurementNoiseCov.at<float>(1,0),KF.measurementNoiseCov.at<float>(1,1),KF.measurementNoiseCov.at<float>(1,2),KF.measurementNoiseCov.at<float>(2,0),KF.measurementNoiseCov.at<float>(2,1),KF.measurementNoiseCov.at<float>(2,2));
+
+        /* Initial error */
+        setIdentity(KF.errorCovPost, Scalar::all(1)); // we are unsure about the inital value 1m -> 1m²=1m²
+    }
+
 
     // NOTE: Kalman publisher
     std::string kalman_estimate_str = node_name + "/kalman_estimate";

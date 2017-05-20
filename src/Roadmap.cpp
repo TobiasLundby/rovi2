@@ -379,6 +379,7 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 				a->edges.push_back(n[i]);
 				a->edge_cost.push_back(_cost[i]);
 				_connectedEdgePairs++;
+				ROS_INFO("Here1");
 
 
 
@@ -395,7 +396,7 @@ void Roadmap::addEdges(std::vector<Node*> n, Node *a, bool check, std::vector<do
 						a->edges.push_back(n[i]);
 						a->edge_cost.push_back(cost);
 						_connectedEdgePairs++;
-						//ROS_INFO("Here");
+						ROS_INFO("Here");
 					}
 				}
 				else
@@ -968,9 +969,9 @@ int main(int argc, char **argv)
   time_t start, end;
 
   time(&start);
+
   ros::init(argc,argv,"roadmap31");
   ros::NodeHandle n;
-
   /*Roadmap Roadmap_ros(n, 1000, 0.01, 2.5, 0.7);
   if(Roadmap_ros.create_roadmap())
   {
@@ -983,6 +984,7 @@ int main(int argc, char **argv)
   
   Roadmap_ros.connectedComponents();
   Roadmap_ros.save_roadmap("Roadmap_1000_0p01_2p5_0p7_connected.txt");
+
  
   time(&end);
   double dif = difftime(end, start);
