@@ -7,6 +7,7 @@
 #include <rw/models/Device.hpp>
 #include <rw/rw.hpp>
 #include <rw/math/Q.hpp>
+#include <rw/math/Transform3D.hpp>
 #include "rovi2/Q.h"
 #include "rovi2/Plan.h"
 #include "rovi2/path.h"
@@ -17,6 +18,9 @@
 #include "rovi2/State.h"
 #include "rovi2/MovePtp.h"
 #include <rw/invkin/JacobianIKSolver.hpp>
+#include <rw/kinematics/MovableFrame.hpp>
+#include <stdlib.h>
+#include <fstream>
 
 #include <list>
 
@@ -25,6 +29,7 @@
 #include <boost/thread/mutex.hpp>
 //#include <boost/thread/lock_guard.hpp>
 #include <boost/bind.hpp>
+#include <chrono>
 
 
 
@@ -70,6 +75,8 @@ private:
 
 	rw::invkin::JacobianIKSolver *_solver; 
 	rw::kinematics::Frame *_BallErrorFrame;
+	rw::kinematics::Frame *_baseFrame;
+	rw::kinematics::MovableFrame* _BallFrame;
 
 	ros::Subscriber robot_controller;
 	ros::Subscriber goal_controller;
@@ -77,10 +84,20 @@ private:
 	ros::ServiceClient robot_call;
 	ros::ServiceClient path_call;
 
+	std::vector<rw::math::Transform3D<double> > test;
+	std::vector<rw::math::Q> testQ;
+
 
 	std::list<rw::math::Q> path;
 	std::list<rw::math::Q> running_path;
 	rw::math::Q moving_to;
+
+	std::chrono::steady_clock::time_point begin;
+	std::chrono::steady_clock::time_point end;
+
+	std::ofstream f;
+
+	int index = 0;
 
 	ros::NodeHandle _n;
 	

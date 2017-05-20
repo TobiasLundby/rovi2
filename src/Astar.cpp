@@ -66,10 +66,8 @@ void Astar::find_path(int startNodeId, int goalNodeId, rovi2::path &path)
 {
 	std::stringstream buffer;
 	buffer << "startNodeId: " << startNodeId << " goalNodeId: " << goalNodeId << std::endl;
-	ROS_INFO("%s", buffer.str().c_str());
+	//ROS_INFO("%s", buffer.str().c_str());
 
-
-	ROS_INFO("Im here 8");
 	_numRun++;
 	if(_openList == nullptr)
 			_openList = new std::priority_queue<Node*, std::vector<Node*>, sort_func>;
@@ -91,11 +89,11 @@ void Astar::find_path(int startNodeId, int goalNodeId, rovi2::path &path)
 		{
 			if(current->nodenum == goalNodeId)
 			{
-				ROS_INFO("Found path");
+				//ROS_INFO("Found path");
 				std::vector<int> path_temp(0);
 				std::stringstream buffer;
 				buffer << "Final goal position " << _graph->at(current->nodenum)->q_val << std::endl;
-				ROS_INFO("%s", buffer.str().c_str());
+				//ROS_INFO("%s", buffer.str().c_str());
 				while(current->nodenum != startNodeId)
 				{	
 					//ROS_INFO("Test");
@@ -106,13 +104,13 @@ void Astar::find_path(int startNodeId, int goalNodeId, rovi2::path &path)
 
 				for(int i = 0; i< path_temp.size(); i++)
 				{
-					if(i < 10)
-					{
+					//if(i < 10)
+					//{
 						path.data.push_back(toRos(_graph->at(path_temp.at(path_temp.size()-1-i))->q_val));
 
-					}
-					else
-						break;
+					//}
+					//else
+					//	break;
 
 
 				}
@@ -131,19 +129,20 @@ void Astar::find_path(int startNodeId, int goalNodeId, rovi2::path &path)
 
 			for(int i = 0; i< current->edges.size(); i++)
 			{
+				double _g_score = current->g_score + current->edge_cost.at(i);
+				double _f_score = current->edges.at(i)->g_score + calc_h(current->edges.at(i)->nodenum, goalNodeId);
 				if(current->edges.at(i)->astar_run != _numRun)
 				{
 					current->edges.at(i)->astar_run = _numRun;
 					current->edges.at(i)->closed = false;
 					current->edges.at(i)->open = false;
-					current->edges.at(i)->g_score = std::numeric_limits<double>::max();
-					current->edges.at(i)->f_score = std::numeric_limits<double>::max();
+					current->edges.at(i)->g_score = _g_score;
+					current->edges.at(i)->f_score = _f_score;
 				}
 
 				if(current->edges.at(i)->closed == false)	
 				{
-					double _g_score = current->g_score + current->edge_cost.at(i);
-					double _f_score = current->edges.at(i)->g_score + calc_h(current->edges.at(i)->nodenum, goalNodeId);
+					
 					if(current->edges.at(i)->open == false)
 					{	
 						current->edges.at(i)->open = true;

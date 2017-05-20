@@ -211,8 +211,8 @@ void Roadmap::find_path(rw::math::Q init, rw::math::Q goal)
 	
 	path_publisher.publish(path);
 	std::stringstream path_length;
-	path_length << "Path_length: " << path.data.size() << std::endl;
-	ROS_INFO("%s", path_length.str().c_str());
+	//path_length << "Path_length: " << path.data.size() << std::endl;
+	//ROS_INFO("%s", path_length.str().c_str());
 	
 	
 
@@ -345,7 +345,8 @@ int Roadmap::nodesInRange(rw::math::Q a)
 
 
 	}
-	return temp;		
+	return temp;
+	//return _kdtree->nnSearch(a).value->nodenum;		
 
 }; 
 
@@ -737,12 +738,14 @@ void Roadmap::initRobworkStuff()
             _radi[i] = _connection_radius/std::max(_metricWeights(i),0.1);
         }
 
+
+
         double nlen = _radi.norm2();
         for(size_t i=0;i<_radi.size();i++){
             _radi[i] = _radi[i]*(_connection_radius*std::sqrt(_device1->getBounds().first.size()))/nlen;
         }
 
-
+	std::cout << "Radi: " << _radi << std::endl;
 	_radi2 = _metricWeights;
 
         for(size_t i=0;i<_radi2.size();i++){
@@ -753,7 +756,7 @@ void Roadmap::initRobworkStuff()
         for(size_t i=0;i<_radi2.size();i++){
             _radi2[i] = _radi2[i]*(_max_density*std::sqrt(_device1->getBounds().first.size()))/nlen;
         }
-
+	std::cout << "Radi2: " << _radi2 << std::endl;
 
 };
 
@@ -994,7 +997,7 @@ int main(int argc, char **argv)
 
 
   */
-   Roadmap Roadmap_ros(n, "Roadmap_1000_0p01_2p0_0p7_connected.txt");
+   Roadmap Roadmap_ros(n, "Roadmap_500000_0p01_0p5_0p25_first/Roadmap_500000_0p01_0p5_0p25_first.txt");
    std::stringstream buffer;
 	buffer << "Roadmap created with " << Roadmap_ros._actualSize << " Nodes and " << Roadmap_ros._connectedEdgePairs << " Edge pairs" <<     std::endl;
 	ROS_INFO("%s", buffer.str().c_str());

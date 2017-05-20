@@ -109,7 +109,7 @@ rw::math::Q RobotNode_ros::getQ()
 
 void RobotNode_ros::StatePublisher()
 {
-	ros::Rate loop_rate(10);
+	ros::Rate loop_rate(25);
 
 	while(ros::ok())
 	{
