@@ -651,15 +651,15 @@ int main(int argc, char** argv)
 
         /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
         //setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
-        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-5; // note row and then column indexing
-        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-5;
-        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-5;
-        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-5;
-        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-5;
-        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-5;
-        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-5;
-        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-5;
-        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-5;
+        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-3; // note row and then column indexing
+        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-3;
+        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-3;
         //ROS_ERROR("measurementNoiseCov\n %f \t%f \t%f \n %f \t%f \t%f \n %f \t%f \t%f \n", KF.measurementNoiseCov.at<float>(0,0),KF.measurementNoiseCov.at<float>(0,1),KF.measurementNoiseCov.at<float>(0,2),KF.measurementNoiseCov.at<float>(1,0),KF.measurementNoiseCov.at<float>(1,1),KF.measurementNoiseCov.at<float>(1,2),KF.measurementNoiseCov.at<float>(2,0),KF.measurementNoiseCov.at<float>(2,1),KF.measurementNoiseCov.at<float>(2,2));
 
         /* Initial error */
@@ -694,15 +694,15 @@ int main(int argc, char** argv)
 
         /* Measurement noise - v in y_t=Cx_t + v - error/noise in the measurement; a measurement is only certain to a accuracy */
         //setIdentity(KF.measurementNoiseCov, Scalar::all(0.05)); //measurement can deviate with XX
-        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-5; // note row and then column indexing
-        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-5;
-        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-5;
-        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-5;
-        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-5;
-        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-5;
-        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-5;
-        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-5;
-        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-5;
+        KF.measurementNoiseCov.at<float>(0,0) =  0.0135e-3; // note row and then column indexing
+        KF.measurementNoiseCov.at<float>(0,1) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(0,2) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(1,0) =  0.0894e-3;
+        KF.measurementNoiseCov.at<float>(1,1) =  0.6759e-3;
+        KF.measurementNoiseCov.at<float>(1,2) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,0) = -0.0628e-3;
+        KF.measurementNoiseCov.at<float>(2,1) = -0.4725e-3;
+        KF.measurementNoiseCov.at<float>(2,2) =  0.3335e-3;
         //ROS_ERROR("measurementNoiseCov\n %f \t%f \t%f \n %f \t%f \t%f \n %f \t%f \t%f \n", KF.measurementNoiseCov.at<float>(0,0),KF.measurementNoiseCov.at<float>(0,1),KF.measurementNoiseCov.at<float>(0,2),KF.measurementNoiseCov.at<float>(1,0),KF.measurementNoiseCov.at<float>(1,1),KF.measurementNoiseCov.at<float>(1,2),KF.measurementNoiseCov.at<float>(2,0),KF.measurementNoiseCov.at<float>(2,1),KF.measurementNoiseCov.at<float>(2,2));
 
         /* Initial error */
