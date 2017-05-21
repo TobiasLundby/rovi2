@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 // ROS
 #include "ros/ros.h"
@@ -62,6 +62,7 @@ private:
   rovi2::position2D xy_left_position;
   rovi2::position2D xy_right_position;
   rovi2::velocityXYZ velocity;
+  rovi2::position3D predicted_pos;
 
 
   // Robwork stuff

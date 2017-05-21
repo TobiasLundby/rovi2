@@ -34,7 +34,7 @@
 #define OUTPUT_RECT_AND_UNDIST_POINT false
 #define CAM_FREQ 10
 
-#define kalman_order2 true /*True = order 2 and false = order 1*/
+#define kalman_order2 false /*True = order 2 and false = order 1*/
 
 rovi2::position2D msg_undist_left;
 rovi2::position2D msg_undist_right;

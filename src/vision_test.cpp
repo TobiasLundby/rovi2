@@ -1,3 +1,4 @@
+// THIS VERSION IS USED FOR SPECIFIC ROBOT LOGGING OF ALL JOINT VALUES
 #include "vision_test.hpp"
 
 vision_test::vision_test(ros::NodeHandle n)
@@ -9,10 +10,9 @@ vision_test::vision_test(ros::NodeHandle n)
   subscribe_predicted = nh.subscribe("/ball_locator_3d/kalman_prediction",0,&vision_test::predicted_callback,this);
   subscribe_xy_left = nh.subscribe("/ball_locator_3d/pos_left",0,&vision_test::xy_left_callback,this);
   subscribe_xy_right = nh.subscribe("/ball_locator_3d/pos_right",0,&vision_test::xy_right_callback,this);
-  subscribe_velocity = nh.subscribe("/ball_locator_3d/velocity",0,&vision_test::velocity_callback,this);
 
-  //_workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
-  _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/tobiaslundby/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
+  //_workcell = rw::loaders::WorkCellLoader::Factory::load("/home/nikolaj/catkin_ws_A/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
+  _workcell = rw::loaders::WorkCellLoader::Factory::load("/home/mathias/catkin_ws/src/rovi2/WorkStation_3/WC3_Scene.wc.xml");
   _device = _workcell->findDevice("UR1");
   _state =  _workcell->getDefaultState();
 
@@ -37,6 +37,40 @@ vision_test::~vision_test()
 void vision_test::robot_status_callback(const rovi2::State &msg)
 {
   robot_state = msg;
+
+ rw::math::Q q = toRw(robot_state.q);
+  _device->setQ(q,_state);
+  rw::math::Vector3D<double> robot_p = robot_base->fTf(TCP_marker,_state).P();
+
+
+  // Transformation matrices
+  rw::math::Vector3D<double> transP(-0.116075, -1.67057, 1.33754);
+  rw::math::Rotation3D<double> transR(rw::math::RPY<double>(-0.0375525, -0.0132076, -2.0942).toRotation3D());
+  rw::math::Transform3D<double> trans(transP, transR);
+//Transform camera points to robot points
+  //rw::math::Vector3D<double> triangulated_pos_robot(triangulated_pos.x, triangulated_pos.y, triangulated_pos.z);
+  //triangulated_pos_robot = trans*triangulated_pos_robot;
+  //rw::math::Vector3D<double> estimated_pos_robot(estimated_pos.x, estimated_pos.y, estimated_pos.z);
+  //estimated_pos_robot = trans*estimated_pos_robot;
+  rw::math::Vector3D<double> predicted_pos_robot(predicted_pos.x,predicted_pos.y,predicted_pos.z);
+  predicted_pos_robot = trans*predicted_pos_robot;
+
+  std::ofstream file;
+  file.open("vision_test.log",std::ios::app);
+  file << predicted_pos_robot(0) << "\t";
+  file << predicted_pos_robot(1) << "\t";
+  file << predicted_pos_robot(2) << "\t";
+  file << robot_p(0) << "\t";
+  file << robot_p(1) << "\t";
+  file << robot_p(2) << "\t";
+  file << q(0) << "\t";
+  file << q(1) << "\t";
+  file << q(2) << "\t";
+  file << q(3) << "\t";
+  file << q(4) << "\t";
+  file << q(5) << "\t";
+  file << std::endl;
+  file.close();
   //ROS_INFO("Got a state");
 }
 
@@ -62,22 +96,14 @@ void vision_test::xy_right_callback(const rovi2::position2D &msg)
   xy_right_position = msg;
 }
 
-void vision_test::velocity_callback(const rovi2::velocityXYZ &msg)
-{
-  velocity = msg;
-}
-
 void vision_test::predicted_callback(const rovi2::position3D &msg)
 {
-  bool log_robot = true;
-  rw::math::Vector3D<double> robot_p(0,0,0);
-  if(log_robot && robot_state.q.data.size() != 0)
-  {
-    //Convert ros q to rw q, set state and conver to cartesian space (forward kinematics)
-    rw::math::Q q = toRw(robot_state.q);
-    _device->setQ(q,_state);
-    robot_p = robot_base->fTf(TCP_marker,_state).P();
-  }
+
+	predicted_pos = msg;
+  /*// Convert ros q to rw q, set state and conver to cartesian space (forward kinematics)
+  rw::math::Q q = toRw(robot_state.q);
+  _device->setQ(q,_state);
+  rw::math::Vector3D<double> robot_p = robot_base->fTf(TCP_marker,_state).P();
 
   // Transformation matrices
   rw::math::Vector3D<double> transP(-0.116075, -1.67057, 1.33754);
@@ -110,13 +136,9 @@ void vision_test::predicted_callback(const rovi2::position3D &msg)
   file << xy_left_position.y << "\t";
   file << xy_right_position.x << "\t";
   file << xy_right_position.y << "\t";
-  file << velocity.x_dot << "\t";
-  file << velocity.y_dot << "\t";
-  file << velocity.z_dot << "\t";
-  file << velocity.p_dot << "\t";
   file << std::endl;
   file.close();
-
+	*/
   //ROS_INFO("Got a prediction");
 }
 
@@ -129,4 +151,3 @@ rw::math::Q vision_test::toRw(const rovi2::Q& q)
   }
   return res;
 }
-
